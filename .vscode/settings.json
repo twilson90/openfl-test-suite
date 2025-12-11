@@ -1,0 +1,24 @@
+{
+    "files.exclude": {
+        "**/export": true,
+        "**/Export": true,
+        "**/node_modules": true,
+        "**/bin": true,
+        "panel/": true
+    },
+    "search.exclude": {
+        "**/node_modules": true,
+        "**/bower_components": true,
+        "**/*.code-search": true,
+        "**/Export": true
+    },
+    "as3mxml.sdk.framework": "C:\\Dev\\apache-flex-sdk-4.16.1-bin",
+    // "haxe.enableServerView": true,
+    // "haxe.buildCompletionCache": true,
+    // "haxe.enableDiagnostics": false,
+    // "haxe.enableSignatureHelpDocumentation": false,
+	// "haxe.diagnosticsPathFilter": "${workspaceRoot}/src|${haxelibPath}"
+    // "haxe.enableCodeLens": false,
+    // "haxe.enableServerView": false,
+    // "haxe.enableDiagnostics": true
+}

@@ -1,0 +1,39 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "HTML5 Server",
+			"type": "shell",
+			"command": "npx",
+			"args": [
+				"serve",
+				"${workspaceFolder}/Export/html5/bin",
+				"-p",
+				"3000"
+			],
+			"runOptions": {
+				"runOn": "folderOpen"
+			}
+		},
+		{
+			"label": "Build HTML5 debug",
+			"type": "shell",
+			"command": "lime",
+			"args": [
+				"build",
+				"html5",
+				"-debug",
+			]
+		},
+		{
+			"label": "Build Windows debug",
+			"type": "shell",
+			"command": "lime",
+			"args": [
+				"build",
+				"windows",
+				"-debug",
+			]
+		}
+	]
+}

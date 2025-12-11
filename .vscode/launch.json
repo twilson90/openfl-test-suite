@@ -1,0 +1,29 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "HTML5 debug",
+            "type": "chrome",
+            "request": "launch",
+            "url": "http://localhost:3000",
+            "webRoot": "${workspaceRoot}",
+            "preLaunchTask": "Build HTML5 debug",
+        },
+        {
+            "name": "HXCPP Rebuild",
+            "type": "hxcpp",
+            "request": "launch",
+            "program": "${workspaceFolder}/Export/windows/bin/Test.exe",
+            "preLaunchTask": "Build Windows debug"
+        },
+        {
+            "name": "HXCPP",
+            "type": "hxcpp",
+            "request": "launch",
+            "program": "${workspaceFolder}/Export/windows/bin/Test.exe",
+        }
+    ]
+}

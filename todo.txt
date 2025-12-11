@@ -1,0 +1,110 @@
+[x] opaqueBackground bounds grow 1 or 2px right and bottom when I change colorTransform
+    render bounds does not change. must be a slight glitch in context not resetting.
+    only happens in canvas mode when opaquebackground is drawn by canvas.
+[x] opaquebackground in opengl mode is slightly incorrect (slightly too small for rotated bounds?)
+[-] defaultTextFormat - setting after setting text in flash does not change text format - difference between openfl, hopwever openfl is much more intuitive and less shit.
+[x] colortransfrom fix unnecessary colorTransform bitmapdata operation in canvas / cairo, multipliers often get stuck at 0.999999999999 in the render pipeline, assume  > 0.9999 equates to 1
+[x] added BeginShaderFill matrix support for canvas / cairo
+[x] opaqueBackground cairo not right
+[-] neko cannnot render ✓ or ✗
+[x] cairo spinning radial gradient hittest messes up due to scale + rotation?
+[x] draw opaquebackground is messing up on windows gl, rotated object draws evaluated bounds of rotation, not rotated bounds.
+
+[ ] check filters, did some stuff to opaqueBackground logic in renderer need to test.
+[ ] colortransform affecting child opaqueBackgrounds in canvas mode (not gl).
+    colortransform in software mode causes displayobjectcontainer to be cacheasbitmap = true effectively.
+    can lead to big inefficiencies, if the container consists of 2 dots spaced apart, mostly blank pixels. also the colortransform is applied to the container in 1 big go. Apply colortransform to each shape / bitmap individually. Also helps with opaquebackground.
+[ ] pixel perfect odd thickness lines no matter (1,3,5,etc). use pixelHinting
+
+explain all changes in renderer, opaquebackground how it was doubled up.
+
+ - Graphics bounds calculation overhaul: Graphics bounds are now calculated on demand when a dirty flag is set (whenever commands are added / cleared, and potentially for scale9Grid). The original method led to certain inaccuracies, for instance, the bounds of a stroked thick line with CapsStyle/JointsStyle can change depending on whether the path is closed or open, but due to the way the graphics API has no explicit end command, the end of a fill / closed paths were impossible to determine in some circumstances. Also with the new implementation we can use it for calculating fill / stroke bounds in scale9Grid, when the old method was too limited (still some work to do here). In the new implementation, JointTypes & CapsStyle are now considered, whereas before there was just an arbitrary padding for miter joints.
+ - Support for DisplayObject.getRect(): New variable __boundsExStroke, which is a separate rectangle for storing the bounds of an object excluding thick strokes. Also added extra parameter to __getBounds() functions, exStroke:Bool.
+ - Additional fixes to DisplayObject.opaqueBackground for all targets: Originally was not accounting for local bounds x / y. Not exactly the same as Flash now but cloose enough, Flash appears to draw individual opaqueBackgrounds for each child of a DisplayObjectContainer, unless there's overlap, then it draws a rect encompassing the 2 overlapping rects. I've found a couple strange quirks/bugs with Flash's implementation, particularly some issues with the bounds of the opaqueBackground when strokes are applied (especially mitered strokes) it can be very inaccurate. No such issues with this new implementation.
+ - Path closures and various drawing API inconsistencies updated to match Flash's: Originally I was seeing minor differences with the way OpenFl handled unclosed paths with fills, manually closed paths (where lineTo/curveTo explicitly closes the path), or the way it handles beginFill in the middle of a series of lineTo/curveTo commands. I have rewritten it for Canvas and Cairo so it now matches Flash's behaviour.
+ - Fixed Gradients for Canvas / Cairo: After struggling to get Gradients working in the Canvas Renderer I took a look at Ruffle and lifted their solution. There's still an issue with stroke gradients which I can't see a reasonable fix for.
+ - Tidied up the Scale9Grid implementation some more.
+ - Removed what appears to be an arbitrary 1.5px pad in OpenGLRenderer.__scissorRect.
+
+ TODO:
+ - Fix scale9Grid objects with strokes
+ - Thoroughly test Graphics API.
+ - Thoroughly test scale9Grid implementation.
+
+
+[ ] flicker when scale9grid changes and getBounds is called...
+[x] need to make graphics __bounds calculate on demand, and make it so getBounds() and getRect() differ.
+[ ] scale9Grid fillBounds and strokeBounds, get rid and integrate GraphicsBoundsHelper? Or do scale9Grid calculations in GraphicsBoundsHelper, 2 extra Bounds?
+[x] opaqueBackground better pixel precision (always + 1 width & height)
+[-] interesting bug in flash, opaqueBackground + miterjoints + right angle triangle, background overdraws left and bottom sides by some strange amount. opaqueBackground is all kinds of FUCKED in flash!
+[ ] masks as single path2Ds, integrate graphics renderMask() into render()
+    cairo + canvas, new var mask:Bool, check true for strokes and fills like hitTest
+[ ] check everything works (opaqueBackground) in forced software mode (hardware=false)
+[ ] thoroughly test cairo gradient matrix. Confusing!
+[ ] consider '__boundsVisual' for Graphics too, because we could lineto a bunch and create a path but it has no actual visible bounds.
+[ ] drawtriangles in its own function canvas/cairo
+[ ] test glrenderer (force hardware all)
+
+
+
+
+
+
+
+commit - fixed draw-ellipse negative width/height
+
+const c = document.getElementById("myCanvas");
+const ctx = c.getContext("2d");
+
+// Create Gradient
+const grd = ctx.createRadialGradient((0-2, 1 for center), 1, 0, 1, 1, 1);
+grd.addColorStop(0, "red");
+grd.addColorStop(0.5, "blue");
+grd.addColorStop(1, "white");
+ctx.transform(200,0,0,200,-100,0)
+// Draw filled Rectangle
+ctx.fillStyle = grd;
+ctx.fillRect(0, 0, 600, 600);
+
+maybe we need fillBounds & strokeBounds for playCommands context... reset each time.
+we can use this to figure out patterngradient transforms, which rely on knowing the completed fill/line bounds to correctly position. This could be used for bitmap patterns too too. 
+Matrix.createGradientBox can be reversed to give original width height rotation tx ty.
+
+Need to figure this out.
+Bounds are currently expanded with each draw command immediately.
+If Scale9Grid however, then we need an alternative way of getting bounds.
+Also, Flash is weird in that it scales strokes both x+y avg if scaled in one axis, so 50% scaleX will result in a 75% thickness of the linestyles, which will affect the inner bounds. I think ignore this strangeness as it is count-intuitive.
+Scaling by x
+
+Scale9Grid negative scaling? Not allowed on flash but maybe not necessary to disable on openfl.
+
+Graphics.hx - this makes no sense, repolace with simpler version and calculate extrema for miter joints in lineTo (grow bounds appropriately)
+
+if (thickness != null)
+{
+    if (joints == JointStyle.MITER)
+    {
+        if (thickness > __strokePadding) __strokePadding = Math.ceil(thickness);
+    }
+    else
+    {
+        if (thickness / 2 > __strokePadding) __strokePadding = Math.ceil(thickness / 2);
+    }
+}
+
+
+
+hittest fills not working draw triangles. Reason: beginPath is called in endFill, a path is never drawn. use context instead of path2d for hittesting specifically.
+
+
+flash: public function invert():void
+
+9scalegrid scaling + hittest fix.
+opaquebackground + stage color, look into some more. My workaround might not work for stage3d.
+
+
+openfl: public function invert():Matrix
+
+BitmapData.draw does not allow negative scaled matrix
+
+html5: alpha masking with cacheAsBitmap=true on target object + mask not working.
