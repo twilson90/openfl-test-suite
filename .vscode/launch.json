@@ -24,6 +24,13 @@
             "type": "hxcpp",
             "request": "launch",
             "program": "${workspaceFolder}/Export/windows/bin/Test.exe",
+        },
+        {
+            "name": "Flash",
+            "type": "fdb",
+            "request": "launch",
+            "program": "${workspaceFolder}/Export/flash/bin/Test.swf",
+            "preLaunchTask": "Build Flash debug"
         }
     ]
 }

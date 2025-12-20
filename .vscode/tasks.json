@@ -26,6 +26,16 @@
 			]
 		},
 		{
+			"label": "Build Flash debug",
+			"type": "shell",
+			"command": "lime",
+			"args": [
+				"build",
+				"flash",
+				"-debug",
+			]
+		},
+		{
 			"label": "Build Windows debug",
 			"type": "shell",
 			"command": "lime",

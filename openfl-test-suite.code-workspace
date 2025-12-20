@@ -1,0 +1,16 @@
+{
+	"folders": [
+		{
+			"name": "openfl-test-suite",
+			"path": "."
+		},
+		{
+			"name": "openfl",
+			"path": "../openfl"
+		},
+		{
+			"path": "../svg"
+		}
+	],
+	"settings": {}
+}

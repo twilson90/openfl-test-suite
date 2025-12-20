@@ -6,16 +6,19 @@
 	
 	<window width="640" height="480" background="#FFFFFF" fps="60" unless="html5" />
 
-	<!-- <haxedef name="canvas" if="html5" /> -->
-	<!-- <haxedef name="cairo" unless="html5" /> -->
+	<haxedef name="canvas" if="html5" />
+	<haxedef name="cairo" unless="html5" />
 	
 	<haxedef name="no-inline" unless="windows" />
+	<!-- <haxedef name="debug_hitTest" />4 -->
 	
 	<source path="Source" />
 	
 	<haxelib name="openfl" />
 	<haxelib name="hxcpp-debug-server" />
 	<haxelib name="format" />
+	<haxelib name="svg" />
+	
 	<haxedef name="no-deprecation-warnings" unless="debug" />
 	
 	<assets path="Assets" rename="assets" />

@@ -26,6 +26,8 @@ import openfl.geom.Rectangle;
 import openfl.ui.Keyboard;
 import openfl.utils.Assets;
 import openfl.text.TextFieldAutoSize;
+import format.SVG;
+
 
 @:access(openfl.display.Graphics)
 class Main extends Sprite {
@@ -37,10 +39,12 @@ class Main extends Sprite {
 	public var showOpaqueBackgrounds:Bool = false;
 	public var current:TestContainer;
 	public var tests:Array<Dynamic> = [
+		Scale9Test,
+		GraphicsTest1,
+		FillLineStyleOrderTest,
+		SVGTest,
 		GradientTest,
 		CloseGapTest,
-		GraphicsTest1,
-		Scale9Test,
 		SpinningTest,
 		MiterBoundsTest,
 		Scale9Test2,
@@ -74,6 +78,7 @@ class Main extends Sprite {
 
 		addChild(boundsSprite);
 		addChild(hitTestSprite);
+		
 		maskSprite.graphics.beginFill(0, 1);
 		maskSprite.graphics.drawEllipse(-200,-100,400,200);
 		addChild(maskSprite);
@@ -91,7 +96,7 @@ class Main extends Sprite {
 
 		Lib.current.stage.addEventListener(KeyboardEvent.KEY_UP, function(e:KeyboardEvent) {
 			for (o in funcMap) {
-				if (e.keyCode == o.key) {
+				if (e.keyCode == cast o.key) {
 					o.func();
 				}
 			}
@@ -131,6 +136,10 @@ class Main extends Sprite {
 
 			if (!pause) {
 				current.onEnterFrame(e);
+				maskSprite.x = Lib.current.stage.mouseX;
+				maskSprite.y = Lib.current.stage.mouseY;
+				maskSprite.scaleX = maskSprite.scaleY = Math.sin(i * Math.PI / 180);
+				maskSprite.rotation = i * 2;
 				i++;
 			}
 
@@ -153,12 +162,6 @@ class Main extends Sprite {
 			infoTF.text = "HIT: " + (newHitTest ? "YES" : "NO");
 			infoTF.y = Lib.current.stage.stageHeight - infoTF.height;
 
-			var maskBounds = maskSprite.getBounds(maskSprite);
-			maskSprite.x = Lib.current.stage.mouseX;
-			maskSprite.y = Lib.current.stage.mouseY;
-			var maxScale = Lib.current.stage.stageWidth / maskBounds.width;
-			maskSprite.scaleX = maskSprite.scaleY = (maxScale/2) + (Math.abs(Math.sin(i * Math.PI / 180)) * (maxScale/2));
-			maskSprite.rotation = i * 2;
 			current.mask = showMask ? maskSprite : null;
 			maskSprite.visible = showMask;
 			
@@ -306,14 +309,17 @@ class SpinningTest extends TestContainer {
 
 		var s = new Sprite();
 		s.name = "thing";
-		s.graphics.lineStyle();
+		s.graphics.lineStyle(20, 0xff0000);
 		s.graphics.beginBitmapFill(bmpData, new Matrix(2,0,0,2, 50, 50));
 		s.graphics.drawRect(0, 0, 200, 200);
 		s.graphics.endFill();
 		addChild(s);
 
+		var i = 0;
 		onEnterFrame = function(e:Event) {
-			s.rotation += 2;
+			s.rotation = i * 2;
+			s.scaleX = s.scaleY = Math.abs(Math.sin(i * Math.PI / 180));
+			i++;
 		};
 	}
 }
@@ -325,13 +331,16 @@ class Scale9Test extends TestContainer {
 
 		var s2 = new Sprite();
 		s2.graphics.lineStyle(20, 0x269B66, 0.5, true);
-		// s2.graphics.beginFill(0xff0000);
-		s2.graphics.beginBitmapFill(bmpData, new Matrix(1,0,0,1, bmpData.width, bmpData.height));
+		var b2 = bmpData.clone();
+		b2.colorTransform(b2.rect, new ColorTransform(1,1,1,0.5));
+		s2.graphics.lineBitmapStyle(b2, new Matrix(2,0,0,2));
+		s2.graphics.beginBitmapFill(bmpData, new Matrix(1,0,0,1), true, false);
 		var width = 200.0;
 		var height = 200.0;
-		s2.graphics.drawRoundRect(0, 0, width, height, width/4, height/4);
+		var offset = new Point(100, 100); 
+		s2.graphics.drawRoundRect(offset.x, offset.y, width, height, width/4, height/4);
 		s2.graphics.endFill();
-		var scale9Grid = new Rectangle(width/4, height/4, width/2, height/2);
+		var scale9Grid = new Rectangle(offset.x + width/4, offset.y + height/4, width/2, height/2);
 		addChild(s2);
 		s2.scale9Grid = scale9Grid;
 		s2.scaleX = 2.0;
@@ -502,6 +511,54 @@ class CloseGapTest extends TestContainer {
 	}
 }
 
+class FillLineStyleOrderTest extends TestContainer {
+	override public function init() {
+		var spr = new Sprite();
+		spr.graphics.lineStyle(30, 0x00ff00);
+		spr.graphics.beginFill(0xff0000);
+		spr.graphics.lineTo(0, 100);
+		spr.graphics.lineStyle(30, 0x0000ff);
+		spr.graphics.lineTo(100, 100);
+		spr.graphics.lineStyle();
+		spr.graphics.endFill();
+		addChild(spr);
+
+		var spr2 = new Sprite();
+		spr2.graphics.lineStyle(30, 0x00ff00, 0.5);
+		spr2.graphics.beginFill(0xff0000);
+		spr2.graphics.lineTo(0, 100);
+		spr2.graphics.lineStyle(30, 0x0000ff, 0.5);
+		spr2.graphics.lineTo(100, 100);
+		spr2.graphics.endFill();
+		spr2.graphics.lineStyle();
+		addChild(spr2);
+		spr2.x = 200;
+
+		var spr3 = new Sprite();
+		spr3.graphics.lineStyle(30, 0x00ff00);
+		spr3.graphics.lineTo(0, 100);
+		spr3.graphics.lineStyle();
+		spr3.graphics.beginFill(0xff0000);
+		spr3.graphics.drawCircle(0,0,50);
+		addChild(spr3);
+		spr3.x = 400;
+		spr3.scaleX = spr3.scaleY = 2;
+	}
+}
+
+class SVGTest extends TestContainer {
+	override public function init() {
+
+		info = "Bug in svg lib, fix: https://github.com/openfl/svg/pull/78";
+
+		var svg = new SVG(Assets.getText("assets/tiger.svg"));
+		var spr = new Sprite();
+		svg.render(spr.graphics);
+		var data = spr.graphics.readGraphicsData();
+		addChild(spr);
+	}
+}
+
 class Scale9Test2 extends TestContainer {
 	override public function init() {
 
@@ -597,7 +654,7 @@ class GradientTest extends TestContainer {
 		var i = 0.0;
 		onEnterFrame = function(e:Event) {
 			oval.rotation = i * 100;
-			oval.scaleX = oval.scaleY = 1 + Math.cos(i) * 0.25;
+			oval.scaleX = oval.scaleY = 1 + Math.sin(i) * 0.25;
 			i += 0.01;
 		};
 	}
