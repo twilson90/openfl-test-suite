@@ -1,21 +1,18 @@
 package;
 
-import openfl.text.TextFormat;
-import openfl.text.TextField;
-import openfl.display.DisplayObjectContainer;
+import format.SVG;
 import openfl.Lib;
 import openfl.Vector;
+import openfl.display.BitmapData;
+import openfl.display.CapsStyle;
 import openfl.display.DisplayObject;
-import openfl.display.Bitmap;
-import openfl.display.FPS;
+import openfl.display.DisplayObjectContainer;
 import openfl.display.GradientType;
 import openfl.display.InterpolationMethod;
-import openfl.display.SpreadMethod;
-import openfl.display.Sprite;
-import openfl.display.Shape;
-import openfl.display.CapsStyle;
 import openfl.display.JointStyle;
 import openfl.display.LineScaleMode;
+import openfl.display.SpreadMethod;
+import openfl.display.Sprite;
 import openfl.events.Event;
 import openfl.events.KeyboardEvent;
 import openfl.events.MouseEvent;
@@ -23,23 +20,31 @@ import openfl.geom.ColorTransform;
 import openfl.geom.Matrix;
 import openfl.geom.Point;
 import openfl.geom.Rectangle;
+import openfl.text.TextField;
+import openfl.text.TextFieldAutoSize;
+import openfl.text.TextFormat;
 import openfl.ui.Keyboard;
 import openfl.utils.Assets;
-import openfl.text.TextFieldAutoSize;
-import format.SVG;
-
 
 @:access(openfl.display.Graphics)
+@:access(openfl.display.DisplayObjectRenderer)
+@:access(openfl.display.Stage)
 class Main extends Sprite {
 	public var currentIndex = 0;
 	public var pause = false;
 	public var showBounds:Bool = false;
 	public var showColorTransform:Bool = false;
 	public var showMask:Bool = false;
+	public var showHitTestMarkers:Bool = false;
 	public var showOpaqueBackgrounds:Bool = false;
-	public var current:TestContainer;
+	public var current:Test;
 	public var tests:Array<Dynamic> = [
 		Scale9Test,
+		Scale9Test2,
+		Scale9Test3,
+		PathAndDrawShapeTest,
+		DrawQuadsTest,
+		CrispPixelStrokeTest, 
 		GraphicsTest1,
 		FillLineStyleOrderTest,
 		SVGTest,
@@ -47,7 +52,6 @@ class Main extends Sprite {
 		CloseGapTest,
 		SpinningTest,
 		MiterBoundsTest,
-		Scale9Test2,
 	];
 
 	public var boundsSprite = new Sprite();
@@ -90,12 +94,15 @@ class Main extends Sprite {
 			{ name: "Toggle Bounds", key: Keyboard.NUMBER_2, keyName: "2", func: toggleBounds },
 			{ name: "Toggle ColorTransform", key: Keyboard.NUMBER_3, keyName: "3", func: toggleColorTransform },
 			{ name: "Toggle Mask", key: Keyboard.NUMBER_4, keyName: "4", func: toggleMask },
+			{ name: "Toggle HitTest Markers", key: Keyboard.NUMBER_5, keyName: "5", func: toggleHitTestMarkers },
 			{ name: "Pause Animations", key: Keyboard.SPACE, keyName: "Space", func: togglePause },
 			{ name: "Clear HitTest Markers", key: Keyboard.DELETE, keyName: "Delete", func: clearHitTestSprite },
 		];
 
+		var getTestFuncMap = ()->funcMap.concat(current.funcMap);
+
 		Lib.current.stage.addEventListener(KeyboardEvent.KEY_UP, function(e:KeyboardEvent) {
-			for (o in funcMap) {
+			for (o in getTestFuncMap()) {
 				if (e.keyCode == cast o.key) {
 					o.func();
 				}
@@ -136,10 +143,12 @@ class Main extends Sprite {
 
 			if (!pause) {
 				current.onEnterFrame(e);
-				maskSprite.x = Lib.current.stage.mouseX;
-				maskSprite.y = Lib.current.stage.mouseY;
-				maskSprite.scaleX = maskSprite.scaleY = Math.sin(i * Math.PI / 180);
-				maskSprite.rotation = i * 2;
+				if (showMask) {
+					maskSprite.x = Lib.current.stage.mouseX;
+					maskSprite.y = Lib.current.stage.mouseY;
+					maskSprite.scaleX = maskSprite.scaleY = Math.sin(i * Math.PI / 180);
+					maskSprite.rotation = i * 2;
+				}
 				i++;
 			}
 
@@ -153,8 +162,10 @@ class Main extends Sprite {
 
 			var newHitTest = current.hitTestPoint(stage.mouseX, stage.mouseY, true);
 
-			if (newHitTest && !hitTest) {
-				hitTestSprite.graphics.drawRect(stage.mouseX-2, stage.mouseY-2, 4, 4);
+			if (showHitTestMarkers) {
+				if (newHitTest && !hitTest) {
+					hitTestSprite.graphics.drawRect(stage.mouseX-2, stage.mouseY-2, 4, 4);
+				}
 			}
 
 			hitTest = newHitTest; 
@@ -179,7 +190,7 @@ class Main extends Sprite {
 			}
 			currentTestTextField.text = str;
 			
-			instructions.text = funcMap.map((f)->{
+			instructions.text = getTestFuncMap().map((f)->{
 				return f.keyName + " → " + f.name;
 			}).join("\n");
 			instructions.x = Lib.current.stage.stageWidth - instructions.width;
@@ -248,6 +259,11 @@ class Main extends Sprite {
 		showMask = !showMask;
 	}
 
+	function toggleHitTestMarkers() {
+		showHitTestMarkers = !showHitTestMarkers;
+		if (!showHitTestMarkers) clearHitTestSprite();
+	}
+
 	function togglePause() {
 		pause = !pause;
 	}
@@ -260,7 +276,13 @@ class Main extends Sprite {
 	function drawBounds(displayObject:DisplayObject) {
 		var bounds = displayObject.getBounds(this);
 		var rect = displayObject.getRect(this);
+		rect.left = Math.floor(rect.left);
+		rect.top = Math.floor(rect.top);
+		rect.right = Math.ceil(rect.right);
+		rect.bottom = Math.ceil(rect.bottom);
 		var origin = displayObject.localToGlobal(new Point());
+		origin.x = Math.round(origin.x);
+		origin.y = Math.round(origin.y);
 		var crosshairSize = 4.0;
 		
 		boundsSprite.graphics.lineStyle(1, 0xff0000);
@@ -281,7 +303,7 @@ class Main extends Sprite {
 	}
 }
 
-class TestContainer extends Sprite {
+class Test extends Sprite {
 	public var onMouseUp = (e:MouseEvent)->{};
 	public var onMouseDown = (e:MouseEvent)->{};
 	public var onMouseMove = (e:MouseEvent)->{};
@@ -291,6 +313,7 @@ class TestContainer extends Sprite {
 	public var onDestroy = ()->{};
 	public var info:String;
 	public var center:Bool = true;
+	public var funcMap:Array<{name:String, key:Int, keyName:String, func:() -> Void}> = [];
 
 	public function init() {
 
@@ -302,14 +325,13 @@ class TestContainer extends Sprite {
 	}
 }
 
-class SpinningTest extends TestContainer {
+class SpinningTest extends Test {
 	override public function init() {
-
 		var bmpData = Assets.getBitmapData("assets/texture.png").clone();
 
 		var s = new Sprite();
 		s.name = "thing";
-		s.graphics.lineStyle(20, 0xff0000);
+		// s.graphics.lineStyle(20, 0xff0000);
 		s.graphics.beginBitmapFill(bmpData, new Matrix(2,0,0,2, 50, 50));
 		s.graphics.drawRect(0, 0, 200, 200);
 		s.graphics.endFill();
@@ -324,49 +346,105 @@ class SpinningTest extends TestContainer {
 	}
 }
 
-class Scale9Test extends TestContainer {
+class Scale9Test extends Test {
 	override function init() {
 		center = false;
-		var bmpData = Assets.getBitmapData("assets/texture.png");
-
-		var s2 = new Sprite();
-		s2.graphics.lineStyle(20, 0x269B66, 0.5, true);
-		var b2 = bmpData.clone();
-		b2.colorTransform(b2.rect, new ColorTransform(1,1,1,0.5));
-		s2.graphics.lineBitmapStyle(b2, new Matrix(2,0,0,2));
-		s2.graphics.beginBitmapFill(bmpData, new Matrix(1,0,0,1), true, false);
+		var bd1 = Assets.getBitmapData("assets/texture.png");
+		var s1 = new Sprite();
+		s1.graphics.lineStyle(20);
+		var bd2 = new BitmapData(bd1.width, bd1.height, true, 0);
+		bd2.copyPixels(bd1, bd1.rect, new Point());
+		bd2.colorTransform(bd2.rect, new ColorTransform(1,1,1,0.5));
+		s1.graphics.lineBitmapStyle(bd2, new Matrix(2,0,0,2));
+		s1.graphics.beginBitmapFill(bd1, new Matrix(1,0,0,1), true, false);
 		var width = 200.0;
 		var height = 200.0;
 		var offset = new Point(100, 100); 
-		s2.graphics.drawRoundRect(offset.x, offset.y, width, height, width/4, height/4);
-		s2.graphics.endFill();
+		s1.graphics.drawRoundRect(offset.x, offset.y, width, height, width/4, height/4);
+		s1.graphics.endFill();
+		
 		var scale9Grid = new Rectangle(offset.x + width/4, offset.y + height/4, width/2, height/2);
+		addChild(s1);
+		s1.scale9Grid = scale9Grid;
+		s1.scaleX = 2.0;
+		s1.x = 100.5;
+		s1.y = 100.5;
+
+		var s2 = new Sprite();
+		s2.hitArea = new Sprite();
 		addChild(s2);
-		s2.scale9Grid = scale9Grid;
-		s2.scaleX = 2.0;
-		s2.x = 100.5;
-		s2.y = 100.5;
 
 		onEnterFrame = function(e:Event) {
-			s2.scaleX = (stage.mouseX - s2.x) / width;
-			s2.scaleY = (stage.mouseY - s2.y) / height;
-			// trace(s2.scaleX, s2.scaleY);
+			s1.scaleX = (stage.mouseX - s1.x) / width;
+			s1.scaleY = (stage.mouseY - s1.y) / height;
+			s2.graphics.clear();
+			s2.graphics.lineStyle(1);
+			s2.graphics.drawRect(0,0, stage.mouseX, stage.mouseY);
 		};
-
-		// var mask = new Sprite();
-		// mask.graphics.beginFill(0xff0000);
-		// // mask.graphics.lineStyle(10, 0x0000ff, 1);
-		// mask.graphics.drawRect(-100, -100, 200, 200);
-		// mask.graphics.endFill();
-		// this.addChild(mask);
-		// this.mask = mask;
-		
-		// this.addEventListener(Event.ADDED_TO_STAGE, function(e:Event) {
-		// 	mask.startDrag();
-		// });
 	}
 }
-class GraphicsTest1 extends TestContainer {
+
+class CrispPixelStrokeTest extends Test {
+	override function init() {
+		var s = new Sprite();
+		center = false;
+
+		addChild(s);
+		onEnterFrame = function(e:Event) {
+			var offset = 100.0;
+			s.graphics.clear();
+			s.graphics.lineStyle(1);
+			s.graphics.drawRect(offset, offset, stage.mouseX - offset, stage.mouseY - offset);
+		};
+	}
+}
+
+class Scale9Test3 extends Test {
+	override function init() {
+		var bmpData = Assets.getBitmapData("assets/texture.png");
+		center = false;
+
+		var s = new Sprite();
+		var size = 600.0;
+		var offset = 60.0;
+
+		var drawRect = (x:Float,y:Float,w:Float,h:Float)->{
+			var m = new Matrix();
+			m.createBox(w/bmpData.width,h/bmpData.height, 0, x,y);
+			s.graphics.beginBitmapFill(bmpData, m, true, false);
+			// s.graphics.beginFill(0xff0000);
+			s.graphics.drawRect(x,y,w,h);
+			s.graphics.endFill();
+		}
+
+		drawRect(0,0,offset,offset);
+		drawRect(size/2,0,size/2,offset);
+		drawRect(size/6,0,size/6,size/6);
+		drawRect(0,size/6,offset,size/6);
+		drawRect(0,size-(size/6),size/6,size/6);
+		drawRect(size/3, size-offset, size/3, offset);
+		drawRect((size-(size/6))/2, (size-(size/6))/2, size/6, size/6); // middle
+		drawRect(size-(size/6), size/6, size/6, size/6);
+		drawRect(size-offset, size-offset, offset, offset); // bottom right
+
+		var container = new Sprite();
+		addChild(container);
+		
+		container.addChild(s);
+		s.hitArea = new Sprite();
+
+		var s9g = new Rectangle(offset, offset, size - (offset*2), size - (offset*2));
+		s.scale9Grid = s9g;
+		s.graphics.lineStyle(1, 0x0000ff);
+		s.graphics.drawRect(s9g.x, s9g.y, s9g.width, s9g.height);
+
+		onEnterFrame = function(e:Event) {
+			s.scaleX = stage.mouseX / size;
+			s.scaleY = stage.mouseY / size;
+		};
+	}
+}
+class GraphicsTest1 extends Test {
 	override public function init() {
 
 		var bmpData = Assets.getBitmapData("assets/texture.png");
@@ -481,26 +559,14 @@ class GraphicsTest1 extends TestContainer {
 			s2.scaleX = s2.scaleY = Math.abs(Math.sin(i * Math.PI / 180));
 			i++;
 		};
-
-		// var mask = new Sprite();
-		// mask.graphics.beginFill(0xff0000);
-		// // mask.graphics.lineStyle(10, 0x0000ff, 1);
-		// mask.graphics.drawRect(-100, -100, 200, 200);
-		// mask.graphics.endFill();
-		// this.addChild(mask);
-		// this.mask = mask;
-		
-		// this.addEventListener(Event.ADDED_TO_STAGE, function(e:Event) {
-		// 	mask.startDrag();
-		// });
 	}
 }
 
-class CloseGapTest extends TestContainer {
+class CloseGapTest extends Test {
 	override public function init() {
-
+		
 		info = "Graphics path with only 2 lineTos should automatically close if filled.";
-
+		
 		var s = new Sprite();
 		s.graphics.lineStyle(10, 0x269B66, 1);
 		s.graphics.beginFill(0xff0000);
@@ -511,7 +577,27 @@ class CloseGapTest extends TestContainer {
 	}
 }
 
-class FillLineStyleOrderTest extends TestContainer {
+class PathAndDrawShapeTest extends Test {
+	override public function init() {
+		var spr = new Sprite();
+		spr.graphics.lineStyle(10, 0x00ff00);
+		spr.graphics.beginFill(0xff0000);
+		spr.graphics.lineTo(0, 100);
+		spr.graphics.lineTo(100, 100);
+		spr.graphics.lineTo(200, 200);
+		spr.graphics.drawCircle(300, 300, 100);
+		spr.graphics.lineTo(400, 200);
+		spr.graphics.lineTo(500, 200);
+		
+		spr.graphics.drawCircle(100, 500, 75);
+		spr.graphics.drawCircle(200, 500, 75);
+		spr.graphics.drawCircle(300, 500, 75);
+		
+		addChild(spr);
+	}
+}
+
+class FillLineStyleOrderTest extends Test {
 	override public function init() {
 		var spr = new Sprite();
 		spr.graphics.lineStyle(30, 0x00ff00);
@@ -546,7 +632,7 @@ class FillLineStyleOrderTest extends TestContainer {
 	}
 }
 
-class SVGTest extends TestContainer {
+class SVGTest extends Test {
 	override public function init() {
 
 		info = "Bug in svg lib, fix: https://github.com/openfl/svg/pull/78";
@@ -556,10 +642,58 @@ class SVGTest extends TestContainer {
 		svg.render(spr.graphics);
 		var data = spr.graphics.readGraphicsData();
 		addChild(spr);
+
+		var scale9Grid = false;
+		function toggleScale9Grid() {
+			scale9Grid = !scale9Grid;
+		}
+		funcMap.push({name: "Toggle Scale9Grid", key: Keyboard.S, keyName: "S", func: toggleScale9Grid });
+
+		var i = 0;
+		onEnterFrame = (e:Event)->{
+			i++;
+			if (scale9Grid) {
+				var r = spr.getRect(spr);
+				r.inflate(-r.width / 4, -r.height / 4);
+				spr.scale9Grid = r;
+				spr.scaleX = 0.5 + Math.abs(Math.sin(i * 0.01))*0.5;
+				spr.scaleY = 0.5 + Math.abs(Math.cos(i * 0.01))*0.5;
+			} else { 
+				spr.scale9Grid = null;
+				spr.scaleX = spr.scaleY = 1.0;
+			}
+		};
 	}
 }
 
-class Scale9Test2 extends TestContainer {
+class DrawQuadsTest extends Test {
+	override public function init() {
+
+        var g = graphics;
+		var bmpData = Assets.getBitmapData("assets/texture.png");
+
+        var rects:Array<Float> = [
+            0, 0, 100, 100,
+            200, 200, 100, 100,
+		];
+        var indices = [
+			0,0,1,1
+		];
+        var transforms:Array<Float> = [
+			1,0,0,1,0,0,
+			1,0,0,1,200,0,
+			0.7071,0.7071,-0.7071,0.7071,0,200,
+			0.7071,0.7071,-0.7071,0.7071,200,200,
+		];
+		// g.lineStyle(10, 0xff0000);
+		g.beginBitmapFill(bmpData, new Matrix(1,0,0,1,0,0));
+        // g.beginFill(0x00FF00);
+        g.drawQuads(Vector.ofArray(rects), Vector.ofArray(indices), Vector.ofArray(transforms));
+        g.endFill();
+	}
+}
+
+class Scale9Test2 extends Test {
 	override public function init() {
 
 		info = "These 2 rounded rectangles (top with scale9Grid, bottom without) should look identical.";
@@ -590,7 +724,7 @@ class Scale9Test2 extends TestContainer {
 	}
 }
 
-class MiterBoundsTest extends TestContainer {
+class MiterBoundsTest extends Test {
 	override public function init() {
 
 		var triangle:Sprite = new Sprite();
@@ -633,7 +767,7 @@ class MiterBoundsTest extends TestContainer {
 	}
 }
 
-class GradientTest extends TestContainer {
+class GradientTest extends Test {
 	override public function init() {
 		var oval = new Sprite();
 		var w = 400;

@@ -17,98 +17,17 @@
     Does mean inconsistency between GL and Software modes, GL does not acknowledge EVENODD winding, enabled by default for Flash.
 [x] masks as single path2Ds, integrate graphics renderMask() into render()
     cairo + canvas, new var mask:Bool, check true for strokes and fills like hitTest
+[x] test pixelRatios
+[-] interesting bug in flash, opaqueBackground + miterjoints + right angle triangle, background overdraws left and bottom sides by some strange amount. opaqueBackground is messed up in flash!
 
-[ ] check filters, did some stuff to opaqueBackground logic in renderer need to test.
 [ ] colortransform affecting child opaqueBackgrounds in canvas mode (not gl).
     colortransform in software mode causes displayobjectcontainer to be cacheasbitmap = true effectively.
     can lead to big inefficiencies, if the container consists of 2 dots spaced apart, mostly blank pixels. also the colortransform is applied to the container in 1 big go. Apply colortransform to each shape / bitmap individually. Also helps with opaquebackground.
-[ ] pixel perfect odd thickness lines no matter (1,3,5,etc). use pixelHinting
-[ ] alpha masks cacheasbitmap
-
-[ ] gl drawEllipse w/ negative scale has only 6 polygon points!!!!
-[ ] test cairo thoroughly, probably gonna be a shit show!
-[ ] test drawQuads
-[ ] test smoothing bitmaps
-[ ] __calculateOffset, check if scale9 works with offset graphics
-
-
-[ ] flicker when scale9grid changes and getBounds is called...
-[ ] scale9Grid fillBounds and strokeBounds, get rid and integrate GraphicsBoundsHelper? Or do scale9Grid calculations in GraphicsBoundsHelper, 2 extra Bounds?
-[-] interesting bug in flash, opaqueBackground + miterjoints + right angle triangle, background overdraws left and bottom sides by some strange amount. opaqueBackground is all kinds of FUCKED in flash!
-[ ] check everything works (opaqueBackground) in forced software mode (hardware=false)
-[ ] thoroughly test cairo gradient matrix. Confusing!
 [ ] consider '__boundsVisual' for Graphics too, because we could lineto a bunch and create a path but it has no actual visible bounds.
-[ ] drawtriangles in its own function canvas/cairo
-[ ] test glrenderer (force hardware all)
+[ ] some kind of warning / error when scale9Grid is set outside of bounds of graphics?
+[ ] FlashGraphics.hx uses drawTriangles for drawQuads, not great. Just use paths?
+    public static function drawQuads(graphics:Graphics, rects:Vector<Float>, indices:Vector<Int>, transforms:Vector<Float>):Void
+[ ] gl drawEllipse w/ negative scale has only 6 polygon points!!!!
+[ ] check filters, did some stuff to opaqueBackground logic in renderer need to test.
+[ ] alpha masks + cacheasbitmap
 
-- Removed drawRect optimization from CanvasGraphics, made no sense.
-
-
-
-
-
-
-- Fixed Scale9Grid offset calculation
-- Fixed Scale9Grid pattern matrix calculation
-- Unified mask drawing logic allowing for complex masks.
-- Fixed hitTest for masks.
-- Fixes for some edge-case drawing sequences involving Graphics.lineStyle. Results now consistent on all targets with Flash.
-- Rearranged code for consistency between CanvasGraphics.hx + CairoGraphics.hx
-
-commit - fixed draw-ellipse negative width/height
-
-const c = document.getElementById("myCanvas");
-const ctx = c.getContext("2d");
-
-// Create Gradient
-const grd = ctx.createRadialGradient((0-2, 1 for center), 1, 0, 1, 1, 1);
-grd.addColorStop(0, "red");
-grd.addColorStop(0.5, "blue");
-grd.addColorStop(1, "white");
-ctx.transform(200,0,0,200,-100,0)
-// Draw filled Rectangle
-ctx.fillStyle = grd;
-ctx.fillRect(0, 0, 600, 600);
-
-maybe we need fillBounds & strokeBounds for playCommands context... reset each time.
-we can use this to figure out patterngradient transforms, which rely on knowing the completed fill/line bounds to correctly position. This could be used for bitmap patterns too too. 
-Matrix.createGradientBox can be reversed to give original width height rotation tx ty.
-
-Need to figure this out.
-Bounds are currently expanded with each draw command immediately.
-If Scale9Grid however, then we need an alternative way of getting bounds.
-Also, Flash is weird in that it scales strokes both x+y avg if scaled in one axis, so 50% scaleX will result in a 75% thickness of the linestyles, which will affect the inner bounds. I think ignore this strangeness as it is count-intuitive.
-Scaling by x
-
-Scale9Grid negative scaling? Not allowed on flash but maybe not necessary to disable on openfl.
-
-Graphics.hx - this makes no sense, repolace with simpler version and calculate extrema for miter joints in lineTo (grow bounds appropriately)
-
-if (thickness != null)
-{
-    if (joints == JointStyle.MITER)
-    {
-        if (thickness > __strokePadding) __strokePadding = Math.ceil(thickness);
-    }
-    else
-    {
-        if (thickness / 2 > __strokePadding) __strokePadding = Math.ceil(thickness / 2);
-    }
-}
-
-
-
-hittest fills not working draw triangles. Reason: beginPath is called in endFill, a path is never drawn. use context instead of path2d for hittesting specifically.
-
-
-flash: public function invert():void
-
-9scalegrid scaling + hittest fix.
-opaquebackground + stage color, look into some more. My workaround might not work for stage3d.
-
-
-openfl: public function invert():Matrix
-
-BitmapData.draw does not allow negative scaled matrix
-
-html5: alpha masking with cacheAsBitmap=true on target object + mask not working.
