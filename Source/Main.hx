@@ -39,19 +39,20 @@ class Main extends Sprite {
 	public var showOpaqueBackgrounds:Bool = false;
 	public var current:Test;
 	public var tests:Array<Dynamic> = [
+		CloseGapTest,
+		MiterBoundsTest,
 		Scale9Test,
 		Scale9Test2,
 		Scale9Test3,
-		PathAndDrawShapeTest,
-		DrawQuadsTest,
 		CrispPixelStrokeTest, 
 		GraphicsTest1,
-		FillLineStyleOrderTest,
-		SVGTest,
 		GradientTest,
-		CloseGapTest,
+		SVGTest,
+		DrawQuadsTest,
 		SpinningTest,
-		MiterBoundsTest,
+		PathAndDrawShapeTest,
+		FillLineStyleOrderTest,
+		FlashGlitchy, 
 	];
 
 	public var boundsSprite = new Sprite();
@@ -572,28 +573,78 @@ class CloseGapTest extends Test {
 		s.graphics.beginFill(0xff0000);
 		s.graphics.lineTo(100, 100);
 		s.graphics.lineTo(0, 100);
-		s.graphics.endFill();
+		// s.graphics.endFill();
 		addChild(s);
+	}
+}
+
+class FlashGlitchy extends Test {
+	override public function init() {
+		info = "Unusual behavior in flash target, the graphics are corrupted by this unusual command order.";
+
+		var spr2 = new Sprite();
+		spr2.graphics.moveTo(100, 0);
+		spr2.graphics.lineTo(0, 100);
+		spr2.graphics.beginFill(0x990000);
+		spr2.graphics.lineTo(100, 100);
+		spr2.graphics.endFill();
+		addChild(spr2);
+		spr2.x = 200;
 	}
 }
 
 class PathAndDrawShapeTest extends Test {
 	override public function init() {
 		var spr = new Sprite();
+
+		spr.graphics.lineStyle(10, 0x0000ff);
+		spr.graphics.moveTo(0, 0);
+		spr.graphics.lineTo(100, 0);
 		spr.graphics.lineStyle(10, 0x00ff00);
 		spr.graphics.beginFill(0xff0000);
-		spr.graphics.lineTo(0, 100);
 		spr.graphics.lineTo(100, 100);
-		spr.graphics.lineTo(200, 200);
-		spr.graphics.drawCircle(300, 300, 100);
-		spr.graphics.lineTo(400, 200);
-		spr.graphics.lineTo(500, 200);
-		
-		spr.graphics.drawCircle(100, 500, 75);
-		spr.graphics.drawCircle(200, 500, 75);
-		spr.graphics.drawCircle(300, 500, 75);
-		
+
 		addChild(spr);
+		spr.x = -200;
+
+		var spr2 = new Sprite();
+		
+		spr2.graphics.moveTo(0,0);
+		spr2.graphics.lineStyle(10, 0x00ff00);
+		spr2.graphics.moveTo(0, 0);
+		spr2.graphics.lineTo(0, 100);
+		spr2.graphics.lineTo(100, 0);
+
+		spr2.graphics.beginFill(0xff0000);
+		spr2.graphics.lineStyle(10, 0x0000ff);
+		spr2.graphics.moveTo(100, 0);
+		spr2.graphics.lineTo(200, 100);
+		spr2.graphics.lineTo(200, 0);
+		spr2.graphics.lineStyle();
+		spr2.graphics.endFill();
+		
+		spr2.graphics.beginFill(0x990000);
+		spr2.graphics.drawCircle(300, 100, 100);
+		spr2.graphics.lineTo(300, 0);
+		spr2.graphics.lineTo(400, 0);
+		spr2.graphics.endFill();
+
+		spr2.graphics.beginFill(0x990000);
+		spr2.graphics.lineStyle(10, 0);
+		spr2.graphics.drawCircle(100, 300, 100);
+		spr2.graphics.drawCircle(200, 300, 100);
+		spr2.graphics.drawCircle(300, 300, 100);
+		
+		addChild(spr2);
+
+		// --------------------
+
+		graphics.beginFill(0);
+		for (x in -2...5) {
+			for (y in -2...5) {
+				graphics.drawRect((x*100)-1, (y*100)-1, 2, 2);
+			}
+		}
 	}
 }
 
@@ -641,6 +692,7 @@ class SVGTest extends Test {
 		var spr = new Sprite();
 		svg.render(spr.graphics);
 		var data = spr.graphics.readGraphicsData();
+		trace(data);
 		addChild(spr);
 
 		var scale9Grid = false;

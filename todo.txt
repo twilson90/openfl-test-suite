@@ -19,6 +19,7 @@
     cairo + canvas, new var mask:Bool, check true for strokes and fills like hitTest
 [x] test pixelRatios
 [-] interesting bug in flash, opaqueBackground + miterjoints + right angle triangle, background overdraws left and bottom sides by some strange amount. opaqueBackground is messed up in flash!
+[x] gl drawEllipse w/ negative scale has only 6 polygon points!
 
 [ ] colortransform affecting child opaqueBackgrounds in canvas mode (not gl).
     colortransform in software mode causes displayobjectcontainer to be cacheasbitmap = true effectively.
@@ -27,7 +28,6 @@
 [ ] some kind of warning / error when scale9Grid is set outside of bounds of graphics?
 [ ] FlashGraphics.hx uses drawTriangles for drawQuads, not great. Just use paths?
     public static function drawQuads(graphics:Graphics, rects:Vector<Float>, indices:Vector<Int>, transforms:Vector<Float>):Void
-[ ] gl drawEllipse w/ negative scale has only 6 polygon points!!!!
 [ ] check filters, did some stuff to opaqueBackground logic in renderer need to test.
 [ ] alpha masks + cacheasbitmap
 

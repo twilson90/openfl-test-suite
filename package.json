@@ -1,6 +1,7 @@
 {
   "scripts": {
-    "openfl-dev-toggle": "node scripts/toggle-openfl-dev.js"
+    "openfl-dev-toggle": "node scripts/toggle-openfl-dev.js",
+    "test": "cd C:\\Projects\\openfl && haxelib run hxp test -Dtarget=air -Duse-lime-tools -verbose --install-hxp-alias"
   },
   "dependencies": {
     "@xmldom/xmldom": "^0.8.11",
