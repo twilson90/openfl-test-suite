@@ -10,7 +10,6 @@
 	<haxedef name="cairo" unless="html5" />
 	
 	<haxedef name="no-inline" unless="windows" />
-	<!-- <haxedef name="debug_hitTest" /> -->
 	
 	<source path="Source" />
 	

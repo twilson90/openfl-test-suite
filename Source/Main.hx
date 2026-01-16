@@ -39,6 +39,11 @@ class Main extends Sprite {
 	public var showOpaqueBackgrounds:Bool = false;
 	public var current:Test;
 	public var tests:Array<Dynamic> = [
+		// MiterBoundsTest,
+		// PathAndDrawShapeTest,
+		// -----------
+		PathAndDrawShapeTest,
+		FillLineStyleOrderTest,
 		CloseGapTest,
 		MiterBoundsTest,
 		Scale9Test,
@@ -50,8 +55,6 @@ class Main extends Sprite {
 		SVGTest,
 		DrawQuadsTest,
 		SpinningTest,
-		PathAndDrawShapeTest,
-		FillLineStyleOrderTest,
 		FlashGlitchy, 
 	];
 
@@ -580,7 +583,7 @@ class CloseGapTest extends Test {
 
 class FlashGlitchy extends Test {
 	override public function init() {
-		info = "Unusual behavior in flash target, the graphics are corrupted by this unusual command order.";
+		info = "Unusual behavior in flash target, the graphics are corrupted by this unusual command order. Resize window in Flash Player to observe.";
 
 		var spr2 = new Sprite();
 		spr2.graphics.moveTo(100, 0);
@@ -589,7 +592,6 @@ class FlashGlitchy extends Test {
 		spr2.graphics.lineTo(100, 100);
 		spr2.graphics.endFill();
 		addChild(spr2);
-		spr2.x = 200;
 	}
 }
 
@@ -632,18 +634,46 @@ class PathAndDrawShapeTest extends Test {
 		spr2.graphics.beginFill(0x990000);
 		spr2.graphics.lineStyle(10, 0);
 		spr2.graphics.drawCircle(100, 300, 100);
+		spr2.graphics.lineStyle();
 		spr2.graphics.drawCircle(200, 300, 100);
+		spr2.graphics.lineStyle(10, 0);
 		spr2.graphics.drawCircle(300, 300, 100);
 		
 		addChild(spr2);
 
+		var spr3 = new Sprite();
+		spr3.graphics.lineStyle(10, 0x432987);
+		spr3.graphics.beginFill(0x990000);
+		spr3.graphics.drawCircle(0, 0, 100);
+		spr3.graphics.lineTo(200, 0);
+		spr3.graphics.beginFill(0x129900);
+		spr3.graphics.drawCircle(0, 100, 100);
+		spr3.graphics.lineTo(200, 100);
+		spr3.graphics.beginFill(0x001799);
+		spr3.graphics.drawCircle(0, 200, 100);
+		spr3.graphics.lineTo(200, 200);
+		spr3.x = -100;
+		spr3.y = 200;
+		
+		addChild(spr3);
+
 		// --------------------
 
+		var rect = this.getRect(this);
+		rect.left = Math.floor(rect.left / 100) * 100;
+		rect.top = Math.floor(rect.top / 100) * 100;
+		rect.right = Math.ceil(rect.right / 100) * 100;
+		rect.bottom = Math.ceil(rect.bottom / 100) * 100;
+
+		var x = rect.x;
 		graphics.beginFill(0);
-		for (x in -2...5) {
-			for (y in -2...5) {
-				graphics.drawRect((x*100)-1, (y*100)-1, 2, 2);
+		while (x <= rect.right) {
+			var y = rect.y;
+			while (y <= rect.bottom) {
+				graphics.drawRect(x-1, y-1, 2, 2);
+				y += 100;
 			}
+			x += 100;
 		}
 	}
 }
