@@ -31,3 +31,5 @@
 [ ] check filters, did some stuff to opaqueBackground logic in renderer need to test.
 [ ] alpha masks + cacheasbitmap
 
+[ ] applying transform.colorTransform on object with mask does not invalidate the image.
+[ ] applying transform.colorTransform on shaderFill does nothing too.
