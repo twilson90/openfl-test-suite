@@ -1,27 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <project>
-	
+
 	<meta title="Test" package="com.sample.Test" version="1.0.0" company="Company Name" />
 	<app main="Main" path="Export" file="Test" />
-	
+
 	<window width="640" height="480" unless="html5" />
-	<window background="#FFFFFF" fps="60" antialiasing="16" hardware="true" />
+	<window background="#FFFFFF" fps="60" antialiasing="16" hardware="true" vsync="true" />
 	<!-- <window hardware="false" /> -->
 
 	<!-- <haxedef name="canvas" if="html5" />
 	<haxedef name="cairo" unless="html5" /> -->
-	
+
 	<haxedef name="no-inline" unless="windows" />
-	
+
 	<source path="Source" />
-	
+
 	<haxelib name="openfl" />
 	<haxelib name="hxcpp-debug-server" />
 	<haxelib name="format" />
 	<haxelib name="svg" />
-	
+
 	<haxedef name="no-deprecation-warnings" unless="debug" />
-	
+
 	<assets path="Assets" rename="assets" />
-	
+
 </project>

@@ -22,7 +22,7 @@
 			"args": [
 				"build",
 				"html5",
-				"-debug",
+				"-debug"
 			]
 		},
 		{
@@ -32,7 +32,7 @@
 			"args": [
 				"build",
 				"flash",
-				"-debug",
+				"-debug"
 			]
 		},
 		{
@@ -42,8 +42,20 @@
 			"args": [
 				"build",
 				"windows",
-				"-debug",
+				"-debug"
 			]
+		},
+		{
+			"type": "lime",
+			"command": "build",
+			"problemMatcher": [
+				"$haxe-absolute",
+				"$haxe",
+				"$haxe-error",
+				"$haxe-trace"
+			],
+			"group": "build",
+			"label": "lime: build (active configuration)"
 		}
 	]
 }

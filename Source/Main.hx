@@ -175,6 +175,10 @@ class Main extends Sprite {
 		var infoTF = new TextField();
 		formatTextField(infoTF);
 		addChild(infoTF);
+		infoTF.text = " ";
+
+		var ft = new FrameTimeGraph();
+		addChild(ft);
 
 		Lib.current.stage.addEventListener(MouseEvent.MOUSE_DOWN, function(e:MouseEvent) {
 			current.onMouseDown(e);
@@ -265,6 +269,9 @@ class Main extends Sprite {
 			}).join("\n");
 			instructions.x = Lib.current.stage.stageWidth - instructions.width;
 			instructions.y = 0;
+
+			ft.x = Lib.current.stage.stageWidth - ft.width;
+			ft.y = Lib.current.stage.stageHeight - ft.height;
 		});
 		loadTest();
 	}
@@ -520,8 +527,8 @@ class Main extends Sprite {
 			tf.autoSize = TextFieldAutoSize.LEFT;
 			tf.background = true;
 			tf.backgroundColor = 0xeeeeee;
-			tf.x = rect.x;
-			tf.y = rect.y;
+			tf.x = rect.x + 1;
+			tf.y = rect.y + 1;
 			boundsSprite.addChild(tf);
 		}
 	}
@@ -603,13 +610,17 @@ class SpinningTest extends Test {
 }
 
 class Scale9Test extends Test {
+	static var bd2:BitmapData;
+
 	override function init() {
 		center = false;
 		var bd1 = Assets.getBitmapData("assets/texture.png");
 		var s1 = new Sprite();
-		var bd2 = new BitmapData(bd1.width, bd1.height, true, 0);
-		bd2.copyPixels(bd1, bd1.rect, new Point());
-		bd2.colorTransform(bd2.rect, new ColorTransform(1, 1, 1, 0.5));
+		if (bd2 == null) {
+			bd2 = new BitmapData(bd1.width, bd1.height, true, 0);
+			bd2.copyPixels(bd1, bd1.rect, new Point());
+			bd2.colorTransform(bd2.rect, new ColorTransform(1, 1, 1, 0.5));
+		}
 		var width = 200.0;
 		var height = 200.0;
 		var offset = new Point(100, 100);

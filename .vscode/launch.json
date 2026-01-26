@@ -5,6 +5,16 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "HashLink",
+            "request": "launch",
+            "type": "hl",
+            // "cwd": "${workspaceFolder}",
+            "cwd": "${workspaceFolder}/Export/hl/bin",
+            "program": "${workspaceFolder}/Export/hl/bin/hlboot.dat",
+            "hl": "${workspaceFolder}/export/hl/bin/Test.exe",
+            "preLaunchTask": "lime: build (active configuration)"
+        },
+        {
             "name": "HTML5 debug",
             "type": "chrome",
             "request": "launch",
