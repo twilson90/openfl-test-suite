@@ -151,12 +151,11 @@ class Utils {
 	}
 
 	static public function isHardwareCompatible(g:Graphics):Bool {
-		#if flash
-		return false;
-		#else
+		#if (!flash)
 		// return g.__isHardwareCompatible;
 		return Reflect.getProperty(g, "__isHardwareCompatible") == true;
 		#end
+		return false;
 	}
 
 	static public function getGLGraphicsDrawCalls(ob:DisplayObject):Int {

@@ -370,16 +370,18 @@ class Main extends Sprite {
 		var flags = [];
 
 		#if !flash
-		if (Utils.hasGraphics(displayObject)) {
-			var g = Utils.getGraphics(displayObject);
-			if (Utils.isHardwareCompatible(g)) {
-				flags.push("GL");
-			} else {
-				#if lime_cairo
-				flags.push("cairo");
-				#elseif (js && html5)
-				flags.push("canvas");
-				#end
+		if (stage.window.context.type == lime.graphics.RenderContextType.OPENGL) {
+			if (Utils.hasGraphics(displayObject)) {
+				var g = Utils.getGraphics(displayObject);
+				if (Utils.isHardwareCompatible(g)) {
+					flags.push("GL");
+				} else {
+					#if lime_cairo
+					flags.push("cairo");
+					#else
+					flags.push("canvas");
+					#end
+				}
 			}
 		}
 		#end
@@ -631,62 +633,16 @@ class GraphicsTest1 extends Test {
 	override public function init() {
 		var bmpData = Assets.getBitmapData("assets/texture.png");
 
-		// var b1 = new Bitmap(bmpData);
-		// addChild(b1);
-
-		// var b2 = new Bitmap(bmpData);
-		// b2.x = 150;
-		// addChild(b2);
-
-		// graphics.beginFill(0x00FF00);
-		// graphics.drawRect(0, 0, 100, 100);
-		// graphics.endFill();
-
-		// 10-point star (5 outer, 5 inner)
 		var cx:Float = 250;
 		var cy:Float = 250;
 		var rOuter:Float = 150;
 		var rInner:Float = 60;
-		var vertices:Array<Float> = [];
-
-		// Generate star vertices
-		for (i in 0...10) {
-			var angle = i * Math.PI / 5; // 36 degrees per point
-			var r = if (i % 2 == 0) rOuter else rInner;
-			vertices.push(Math.round(cx + Math.cos(angle) * r));
-			vertices.push(Math.round(cy + Math.sin(angle) * r));
-		}
-
-		// Triangulate star manually
-		// We'll use center vertex + triangle fan for simplicity
-		var indices:Array<Int> = [];
-		var centerIndex = Std.int(vertices.length / 2); // next index for center
-		vertices.push(cx);
-		vertices.push(cy); // add center point
-
-		for (i in 0...10) {
-			var next = Std.int((i + 1) % 10);
-			indices.push(centerIndex);
-			indices.push(i);
-			indices.push(next);
-		}
-		var uvtData:Array<Float> = [];
-		for (i in 0...Std.int(vertices.length / 2)) {
-			var x = vertices[i * 2];
-			var y = vertices[i * 2 + 1];
-
-			var u = (x - (cx - rOuter)) / (2 * rOuter);
-			var v = (y - (cy - rOuter)) / (2 * rOuter);
-
-			uvtData.push(u);
-			uvtData.push(v);
-		}
 
 		// g.drawTriangles(Vector.ofArray(vertices), Vector.ofArray(indices)); // , Vector.ofArray(uvtData)
-		vertices = [0, 0, 200, 0, 200, 200, 0, 200];
-		indices = [0, 1, 2, 0, 2, 3];
+		var vertices:Array<Float> = [0, 0, 200, 0, 200, 200, 0, 200];
+		var indices = [0, 1, 2, 0, 2, 3];
 		// uvtData = [0, 0, 1, 0, 1, 1, 0, 1];
-		uvtData = [0, 0, 0.5, 0, 1, 2, 0, 1];
+		var uvtData:Array<Float> = [0, 0, 0.5, 0, 1, 2, 0, 1];
 
 		var triSprite = new Sprite();
 		triSprite.graphics.beginBitmapFill(bmpData);

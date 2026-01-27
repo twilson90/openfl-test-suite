@@ -6,10 +6,11 @@
 
 	<window width="1280" height="720" unless="html5" />
 	<window background="#FFFFFF" fps="60" antialiasing="16" hardware="true" vsync="true" />
-	<!-- <window hardware="false" /> -->
 
+	<!-- <window hardware="false" /> -->
 	<!-- <haxedef name="canvas" if="html5" />
 	<haxedef name="cairo" unless="html5" /> -->
+
 	<haxedef name="gl_stats" />
 	<haxedef name="no-inline" />
 
