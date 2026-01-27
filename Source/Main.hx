@@ -29,10 +29,6 @@ import openfl.text.TextFormat;
 import openfl.ui.Keyboard;
 import openfl.utils.Assets;
 
-@:access(openfl.display.Graphics)
-@:access(openfl.display.DisplayObject)
-@:access(openfl.display.DisplayObjectRenderer)
-@:access(openfl.display.Stage)
 class Main extends Sprite {
 	public var currentIndex = 0;
 	public var pause = false;
@@ -44,25 +40,27 @@ class Main extends Sprite {
 	public var current:Test;
 	public var tests:Array<Dynamic> = [
 		// -----------
-		ShaderFillTest,
-		AlphaMaskTest,
-		ComplexMaskTest,
 		PathAndDrawShapeTest,
 		FillLineStyleOrderTest,
 		CloseGapTest,
 		MiterBoundsTest,
+		GradientTest,
 		Scale9Test,
 		Scale9Test2,
 		Scale9Test3,
-		CrispPixelStrokeTest,
 		GraphicsTest1,
-		GradientTest,
+		FlashGlitchy,
+		GLBatchTest,
+		Crisp1PixelStrokeTest,
 		SVGTest,
 		DrawQuadsTest,
 		SpinningTest,
-		FlashGlitchy,
+		ShaderFillTest,
+		AlphaMaskTest,
+		ComplexMaskTest,
 	];
 
+	public var testContainer = new Sprite();
 	public var boundsSprite = new Sprite();
 	public var hitTestSprite = new Sprite();
 
@@ -89,6 +87,7 @@ class Main extends Sprite {
 	public function new() {
 		super();
 
+		addChild(testContainer);
 		addChild(boundsSprite);
 		addChild(hitTestSprite);
 
@@ -177,7 +176,7 @@ class Main extends Sprite {
 		addChild(infoTF);
 		infoTF.text = " ";
 
-		var ft = new FrameTimeGraph();
+		var ft = new FrameTimeGraph(testContainer);
 		addChild(ft);
 
 		Lib.current.stage.addEventListener(MouseEvent.MOUSE_DOWN, function(e:MouseEvent) {
@@ -237,11 +236,10 @@ class Main extends Sprite {
 
 			current.transform.colorTransform = showColorTransform ? colorTransform : emptyColorTransform;
 
-			clear(boundsSprite);
+			Utils.clear(boundsSprite);
 
 			if (showBounds) {
-				drawBounds(current);
-				var allChildren = getChildren(current);
+				var allChildren = Utils.getDescendents(current, true);
 				var maskMap = new Map<DisplayObject, DisplayObject>();
 				for (c in allChildren) {
 					if (c.mask != null) {
@@ -283,8 +281,7 @@ class Main extends Sprite {
 		clearHitTestSprite();
 		var test_clazz = tests[currentIndex];
 		current = cast Type.createInstance(test_clazz, []);
-		addChildAt(current, 0);
-		current.name = Type.getClassName(test_clazz);
+		testContainer.addChild(current);
 		current.init();
 	}
 
@@ -350,126 +347,15 @@ class Main extends Sprite {
 		hitTestSprite.graphics.beginFill(0x000000);
 	}
 
-	function roundRect(rect:Rectangle) {
-		var w = rect.width;
-		var h = rect.height;
-
-		rect.left = Math.floor(rect.left);
-		rect.right = w == 0 ? rect.left : Math.ceil(rect.right);
-		rect.top = Math.floor(rect.top);
-		rect.bottom = h == 0 ? rect.top : Math.ceil(rect.bottom);
-	}
-
-	function roundPoint(point:Point) {
-		point.x = Math.round(point.x);
-		point.y = Math.round(point.y);
-	}
-
-	function clear(o:DisplayObject) {
-		var g = getGraphics(o);
-		if (g != null)
-			g.clear();
-		__removeChildren(o);
-	}
-
-	function __removeChildren(o:DisplayObject) {
-		if (Std.isOfType(o, DisplayObjectContainer)) {
-			var doc:DisplayObjectContainer = cast o;
-			doc.removeChildren();
-		}
-	}
-
-	function getChildren(o:DisplayObject, result:Array<DisplayObject> = null):Array<DisplayObject> {
-		if (result == null)
-			result = new Array<DisplayObject>();
-		if (Std.isOfType(o, DisplayObjectContainer)) {
-			var doc:DisplayObjectContainer = cast o;
-			for (c in 0...doc.numChildren) {
-				result.push(doc.getChildAt(c));
-				getChildren(doc.getChildAt(c), result);
-			}
-		}
-		return result;
-	}
-
-	inline function __getScale9GridPosition(pos:Float, start:Float, center:Float, total:Float, scale:Float):Float {
-		if (scale <= 0)
-			return 0;
-
-		var end = total - start - center;
-		var scaledTotal = total * scale;
-		var scaledCenter = scaledTotal - start - end;
-
-		// center collapsed → compress start+end uniformly
-		if (scaledCenter <= 0) {
-			var k = scaledTotal / (start + end);
-			if (pos <= start)
-				return pos * k;
-			else if (pos >= start + center)
-				return scaledTotal - (total - pos) * k;
-			else
-				return start * k;
-		}
-
-		// start
-		if (pos <= start)
-			return pos;
-
-		// end
-		if (pos >= start + center)
-			return start + scaledCenter + (pos - start - center);
-
-		var k = (pos - start) / center;
-		if (k < 0)
-			k = 0;
-		else if (k > 1)
-			k = 1;
-
-		// center
-		return start + scaledCenter * k;
-	}
-
-	function getScale9GridRect(ob:DisplayObject):Rectangle {
-		var rect = ob.getRect(ob);
-		var minX = rect.x;
-		var minY = rect.y;
-		var scale9 = ob.scale9Grid;
-		var scaledMinX = __getScale9GridPosition(minX, scale9.x, scale9.width, rect.width, ob.scaleX);
-		var scaledMinY = __getScale9GridPosition(minY, scale9.y, scale9.height, rect.height, ob.scaleY);
-		inline function sx(x:Float):Float {
-			return minX + (__getScale9GridPosition(x, scale9.x, scale9.width, rect.width, ob.scaleX) - scaledMinX) / ob.scaleX;
-		}
-		inline function sy(y:Float):Float {
-			return minY + (__getScale9GridPosition(y, scale9.y, scale9.height, rect.height, ob.scaleY) - scaledMinY) / ob.scaleY;
-		}
-		var p = ob.localToGlobal(new Point(sx(scale9.left), sy(scale9.top)));
-		var q = ob.localToGlobal(new Point(sx(scale9.right), sy(scale9.bottom)));
-		rect = new Rectangle(p.x, p.y, q.x - p.x, q.y - p.y);
-		return rect;
-	}
-
-	inline function __getScale9GridPositionX(ob:DisplayObject, pos:Float, boundsWidth:Float):Float {
-		return __getScale9GridPosition(pos, ob.scale9Grid.x, ob.scale9Grid.width, boundsWidth, ob.scaleX);
-	}
-
-	inline function __getScale9GridPositionY(ob:DisplayObject, pos:Float, boundsHeight:Float):Float {
-		return __getScale9GridPosition(pos, ob.scale9Grid.y, ob.scale9Grid.height, boundsHeight, ob.scaleY);
-	}
-
-	function isValidScale9(ob:DisplayObject):Bool {
-		var worldMatrix = ob.transform.concatenatedMatrix;
-		return ob.scale9Grid != null && worldMatrix.a > 0 && worldMatrix.b == 0 && worldMatrix.c == 0 && worldMatrix.d > 0;
-	}
-
 	function drawBounds(displayObject:DisplayObject) {
 		var g = boundsSprite.graphics;
 
 		var bounds = displayObject.getBounds(this);
-		roundRect(bounds);
+		Utils.roundRect(bounds);
 		var rect = displayObject.getRect(this);
-		roundRect(rect);
+		Utils.roundRect(rect);
 		var origin = displayObject.localToGlobal(new Point());
-		roundPoint(origin);
+		Utils.roundPoint(origin);
 		var crosshairSize = 4.0;
 
 		g.lineStyle(1, 0xff0000);
@@ -483,11 +369,26 @@ class Main extends Sprite {
 		g.lineTo(origin.x + crosshairSize, origin.y);
 		var flags = [];
 
-		if (isValidScale9(displayObject)) {
+		#if !flash
+		if (Utils.hasGraphics(displayObject)) {
+			var g = Utils.getGraphics(displayObject);
+			if (Utils.isHardwareCompatible(g)) {
+				flags.push("GL");
+			} else {
+				#if lime_cairo
+				flags.push("cairo");
+				#elseif (js && html5)
+				flags.push("canvas");
+				#end
+			}
+		}
+		#end
+
+		if (Utils.isValidScale9(displayObject)) {
 			g.lineStyle(1, 0x0000FF);
 
-			var scale9Rect = getScale9GridRect(displayObject);
-			roundRect(scale9Rect);
+			var scale9Rect = Utils.getScale9GridRect(displayObject);
+			Utils.roundRect(scale9Rect);
 
 			g.moveTo(scale9Rect.left, rect.top);
 			g.lineTo(scale9Rect.left, rect.bottom);
@@ -504,60 +405,21 @@ class Main extends Sprite {
 			flags.push("scale9");
 		}
 
-		if (hasGraphics(displayObject)) {
-			var g = getGraphics(displayObject);
-			#if flash
-			flags.push("flash");
-			#else
-			if (isHardwareCompatible(g)) {
-				flags.push("GL");
-			} else {
-				#if lime_cairo
-				flags.push("cairo");
-				#elseif (js && html5)
-				flags.push("canvas");
-				#end
-			}
-			#end
-		}
+		g.lineStyle();
+
 		if (flags.length > 0) {
 			var tf = new TextField();
+			tf.selectable = false;
 			tf.defaultTextFormat = new TextFormat("Arial", 12);
 			tf.text = flags.join(", ");
 			tf.autoSize = TextFieldAutoSize.LEFT;
-			tf.background = true;
-			tf.backgroundColor = 0xeeeeee;
-			tf.x = rect.x + 1;
-			tf.y = rect.y + 1;
+			tf.x = bounds.x + 1;
+			tf.y = bounds.y + 1;
+			g.beginFill(0xeeeeee, 0.6);
+			g.drawRect(tf.x, tf.y, tf.width, tf.height);
+			g.endFill();
 			boundsSprite.addChild(tf);
 		}
-	}
-
-	function getGraphics(displayObject:DisplayObject):Graphics {
-		if (displayObject is Sprite) {
-			return cast(displayObject, Sprite).graphics;
-		}
-		if (displayObject is Shape) {
-			return cast(displayObject, Shape).graphics;
-		}
-		return null;
-	}
-
-	function hasGraphics(displayObject:DisplayObject):Bool {
-		#if flash
-		var g = getGraphics(displayObject);
-		return g != null && g.readGraphicsData(false).length > 0;
-		#else
-		return displayObject.__graphics != null;
-		#end
-	}
-
-	function isHardwareCompatible(g:Graphics):Bool {
-		#if flash
-		return false;
-		#else
-		return g.__isHardwareCompatible;
-		#end
 	}
 }
 
@@ -577,6 +439,11 @@ class Test extends Sprite {
 		keyName:String,
 		func:() -> Void
 	}> = [];
+
+	public function new() {
+		super();
+		name = Type.getClassName(Type.getClass(this));
+	}
 
 	public function init() {}
 
@@ -743,10 +610,12 @@ class Scale9Test3 extends Test {
 	}
 }
 
-class CrispPixelStrokeTest extends Test {
+class Crisp1PixelStrokeTest extends Test {
 	override function init() {
 		var s = new Sprite();
 		center = false;
+
+		info = "The line should be crisp and not antialiased.";
 
 		addChild(s);
 		onEnterFrame = function(e:Event) {
@@ -964,25 +833,6 @@ class PathAndDrawShapeTest extends Test {
 		spr3.y = 200;
 
 		addChild(spr3);
-
-		// --------------------
-
-		var rect = this.getRect(this);
-		rect.left = Math.floor(rect.left / 100) * 100;
-		rect.top = Math.floor(rect.top / 100) * 100;
-		rect.right = Math.ceil(rect.right / 100) * 100;
-		rect.bottom = Math.ceil(rect.bottom / 100) * 100;
-
-		var x = rect.x;
-		graphics.beginFill(0);
-		while (x <= rect.right) {
-			var y = rect.y;
-			while (y <= rect.bottom) {
-				graphics.drawRect(x - 1, y - 1, 2, 2);
-				y += 100;
-			}
-			x += 100;
-		}
 	}
 }
 
@@ -1085,6 +935,11 @@ class DrawQuadsTest extends Test {
 		// g.beginFill(0x00FF00);
 		g.drawQuads(Vector.ofArray(rects), Vector.ofArray(indices), Vector.ofArray(transforms));
 		g.endFill();
+		// var i = 0;
+		// onEnterFrame = (e:Event) -> {
+		// 	this.scaleX = this.scaleY = 1.0 + Math.abs(Math.sin(i * 0.01)) * 0.5;
+		// 	i++;
+		// };
 	}
 }
 
@@ -1223,6 +1078,69 @@ class ComplexMaskTest extends Test {
 		addChild(spr);
 
 		spr.mask = tiger;
+	}
+}
+
+class GLBatchTest extends Test {
+	override public function init() {
+		var spr = new Sprite();
+		var g = spr.graphics;
+
+		info = "This test draws a number of primitives with the least amount of GL draw calls possible.";
+
+		// g.beginFill(0xFF0000);
+		var bmpData = Assets.getBitmapData("assets/texture.png");
+		g.beginBitmapFill(bmpData);
+
+		var gap = 50.0;
+		var h = 100.0;
+		var w = 100.0;
+		var x = 0.0;
+		var y = 0.0;
+
+		// row 1
+		g.drawRect(x, y, w, h);
+		x += w + gap;
+		g.drawCircle(x + w / 2, y + h / 2, w / 2);
+		x += w + gap;
+		g.drawEllipse(x, y, w, h);
+		x += w + gap;
+		g.drawRoundRect(x, y, w, h, 25, 25);
+
+		// // row 2, quads
+		y += h + gap;
+		var rects:Array<Float> = [0, 0, w, h];
+		var indices = [0, 0, 0, 0];
+		var transforms:Array<Float> = [
+			1, 0, 0, 1,             0, y,
+			1, 0, 0, 1,     (gap + w), y,
+			1, 0, 0, 1, (gap + w) * 2, y,
+			1, 0, 0, 1, (gap + w) * 3, y,
+		];
+		g.drawQuads(Vector.ofArray(rects), Vector.ofArray(indices), Vector.ofArray(transforms));
+
+		// row 3, tris
+		x = 0.0;
+		y += h + gap;
+		var vertices:Array<Float> = [];
+		var indices:Array<Int> = [];
+		for (xc in 0...4) {
+			x = (w + gap) * xc;
+			var left = x;
+			var top = y;
+			var right = x + w;
+			var bottom = y + h;
+			vertices = vertices.concat([left, top, right, top, right, bottom, left, bottom]);
+			indices = indices.concat([xc * 4, xc * 4 + 1, xc * 4 + 2, xc * 4, xc * 4 + 2, xc * 4 + 3]);
+		}
+		g.drawTriangles(Vector.ofArray(vertices), Vector.ofArray(indices));
+
+		onEnterFrame = function(e:Event) {
+			spr.width = stage.mouseX;
+			spr.height = stage.mouseY;
+		};
+
+		addChild(spr);
 	}
 }
 

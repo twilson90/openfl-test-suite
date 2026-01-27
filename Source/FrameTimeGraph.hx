@@ -1,17 +1,18 @@
 package;
 
+import openfl.Lib;
 import openfl.display.Bitmap;
 import openfl.display.BitmapData;
+import openfl.display.DisplayObject;
 import openfl.display.Sprite;
+import openfl.events.Event;
+import openfl.geom.Rectangle;
 import openfl.text.TextField;
 import openfl.text.TextFieldAutoSize;
 import openfl.text.TextFormat;
-import openfl.events.Event;
-import openfl.geom.Rectangle;
-import openfl.Lib;
 
 class FrameTimeGraph extends Sprite {
-	public function new(widthPx:Int = 200, heightPx:Int = 60) {
+	public function new(target:DisplayObject, widthPx:Int = 200, heightPx:Int = 60) {
 		super();
 
 		var bg = 0xA00F0F0F;
@@ -57,7 +58,14 @@ class FrameTimeGraph extends Sprite {
 			// draw bar (bottom-up)
 			var baseY = heightPx - Std.int((clamped / maxMs) * heightPx);
 			bmpData.fillRect(new Rectangle(widthPx - 1, baseY, 1, barHeight), color);
-			tf.text = Std.int(delta) + "ms | avg: " + Std.int(avgMs) + "ms";
+			var parts = [
+				"Δ: " + Std.int(delta) + "ms",
+				"avg: " + Std.int(avgMs) + "ms",
+				#if (gl_stats && !flash && !disable_cffi && (!html5 || !canvas))
+				"draws: " + Utils.getGLGraphicsDrawCalls(target),
+				#end
+			];
+			tf.text = parts.join(" | ");
 
 			// draw baseline
 			var baseY = heightPx - Std.int((targetMs / maxMs) * heightPx);

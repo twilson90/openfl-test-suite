@@ -5,6 +5,11 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Lime",
+            "request": "launch",
+            "type": "lime",
+        },
+        {
             "name": "HashLink",
             "request": "launch",
             "type": "hl",
