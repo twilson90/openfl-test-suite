@@ -16,7 +16,7 @@
 	<!-- <haxedef name="gl_stats" /> -->
 	<haxedef name="no-inline" unless="windows" />
 	<!-- <haxedef name="openfl_legacy_scale9grid" /> -->
-	<haxedef name="openfl_disable_graphics_pixel_snapping" />
+	<!-- <haxedef name="openfl_disable_graphics_pixel_snapping" /> -->
 	<!-- <haxedef name="openfl_disable_graphics_upscaling" /> -->
 	<!-- <haxedef name="openfl_disable_hdpi" /> -->
 	<!-- <haxedef name="openfl_disable_hdpi_graphics" /> -->
