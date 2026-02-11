@@ -1,7 +1,7 @@
 {
 	"version": "2.0.0",
 	"tasks": [
-		{
+		/* {
 			"label": "HTML5 Server",
 			"type": "shell",
 			"command": "npx",
@@ -14,7 +14,7 @@
 			"runOptions": {
 				"runOn": "folderOpen"
 			}
-		},
+		}, */
 		{
 			"label": "Build HTML5 debug",
 			"type": "shell",
@@ -44,18 +44,6 @@
 				"windows",
 				"-debug"
 			]
-		},
-		{
-			"type": "lime",
-			"command": "build",
-			"problemMatcher": [
-				"$haxe-absolute",
-				"$haxe",
-				"$haxe-error",
-				"$haxe-trace"
-			],
-			"group": "build",
-			"label": "lime: build (active configuration)"
 		}
 	]
 }

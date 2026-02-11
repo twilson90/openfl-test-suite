@@ -3,25 +3,31 @@
 
 	<meta title="Test" package="com.sample.Test" version="1.0.0" company="Company Name" />
 	<app main="Main" path="Export" file="Test" />
+	<!-- <app main="FrameTimingTest" path="Export" file="Test2" /> -->
+	<!-- <app main="ClippingTest" path="Export" file="Test3" /> -->
 
 	<window width="1280" height="720" unless="html5" />
-	<window background="#FFFFFF" fps="60" antialiasing="16" hardware="true" vsync="true" />
-
+	<window background="#FFFFFF" fps="60" hardware="true" vsync="true" />
+	<!-- <window antialiasing="16" /> -->
 	<!-- <window hardware="false" /> -->
-	<!-- <haxedef name="canvas" if="html5" />
-	<haxedef name="cairo" unless="html5" /> -->
+	<!-- <window borderless="true" resizable="false" width="1920" height="1080" /> -->
 
-	<haxedef name="gl_stats" />
-	<haxedef name="no-inline" />
+	<!-- <haxedef name="dom" if="html5" /> -->
+	<!-- <haxedef name="gl_stats" /> -->
+	<haxedef name="no-inline" unless="windows" />
+	<!-- <haxedef name="openfl_legacy_scale9grid" /> -->
+	<haxedef name="openfl_disable_graphics_pixel_snapping" />
+	<!-- <haxedef name="openfl_disable_graphics_upscaling" /> -->
+	<!-- <haxedef name="openfl_disable_hdpi" /> -->
+	<!-- <haxedef name="openfl_disable_hdpi_graphics" /> -->
 
 	<source path="Source" />
 
 	<haxelib name="openfl" />
-	<!-- <haxelib name="hxcpp-debug-server" /> -->
-	<!-- <haxelib name="format" /> -->
+	<haxelib name="format" />
 	<haxelib name="svg" />
 
-	<haxedef name="no-deprecation-warnings" unless="debug" />
+	<!-- <haxedef name="no-deprecation-warnings" unless="debug" /> -->
 
 	<assets path="Assets" rename="assets" />
 

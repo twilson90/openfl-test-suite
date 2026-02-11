@@ -60,7 +60,7 @@ class FrameTimeGraph extends Sprite {
 			bmpData.fillRect(new Rectangle(widthPx - 1, baseY, 1, barHeight), color);
 			var parts = [
 				"Δ: " + Std.int(delta) + "ms",
-				"avg: " + Std.int(avgMs) + "ms",
+				"avg: " + Utils.formatDecimals(avgMs, 1) + "ms",
 				#if (gl_stats && !flash && !disable_cffi && (!html5 || !canvas))
 				"draws: " + Utils.getGLGraphicsDrawCalls(target),
 				#end

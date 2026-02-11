@@ -172,4 +172,71 @@ class Utils {
 		#end
 		return drawCalls;
 	}
+
+	static public function drawArc(g:Graphics, cx:Float, cy:Float, r:Float, tail:Float, head:Float) {
+		var sweep = head - tail;
+		if (sweep <= 0)
+			return;
+
+		// split into ≤45° segments for smoothness
+		var segs = Math.ceil(Math.abs(sweep) / (Math.PI / 4));
+		var step = sweep / segs;
+
+		// start at center
+		g.moveTo(cx, cy);
+
+		// first point on circle
+		var angle = tail;
+		var x0 = cx + Math.cos(angle) * r;
+		var y0 = cy + Math.sin(angle) * r;
+		g.lineTo(x0, y0);
+
+		// iterate segments
+		for (i in 0...segs) {
+			var next = angle + step;
+			var mid = (angle + next) / 2;
+
+			// control point for quadratic curve
+			var cxp = cx + Math.cos(mid) * (r / Math.cos(step / 2));
+			var cyp = cy + Math.sin(mid) * (r / Math.cos(step / 2));
+
+			// end point of segment
+			var x1 = cx + Math.cos(next) * r;
+			var y1 = cy + Math.sin(next) * r;
+
+			g.curveTo(cxp, cyp, x1, y1);
+
+			angle = next;
+		}
+
+		// back to center to close the pie
+		g.lineTo(cx, cy);
+	}
+
+	static public function formatDecimals(v:Float, decimals:Int):String {
+		var p = Math.pow(10, decimals);
+		var r = Math.round(v * p) / p;
+		var s = Std.string(r);
+
+		var dot = s.indexOf(".");
+
+		// No decimal point at all → add one + zeros
+		if (dot == -1) {
+			if (decimals == 0)
+				return s;
+			return s + "." + StringTools.lpad("", "0", decimals);
+		}
+
+		var currentDecimals = s.length - dot - 1;
+
+		// Already has enough decimals
+		if (currentDecimals >= decimals) {
+			if (decimals == 0)
+				return s.substr(0, dot);
+			return s;
+		}
+
+		// Needs padding zeros
+		return s + StringTools.lpad("", "0", decimals - currentDecimals);
+	}
 }

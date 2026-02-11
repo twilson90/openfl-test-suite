@@ -24,12 +24,20 @@
 [ ] colortransform affecting child opaqueBackgrounds in canvas mode (not gl).
     colortransform in software mode causes displayobjectcontainer to be cacheasbitmap = true effectively.
     can lead to big inefficiencies, if the container consists of 2 dots spaced apart, mostly blank pixels. also the colortransform is applied to the container in 1 big go. Apply colortransform to each shape / bitmap individually. Also helps with opaquebackground.
-[ ] consider '__boundsVisual' for Graphics too, because we could lineto a bunch and create a path but it has no actual visible bounds.
-[ ] some kind of warning / error when scale9Grid is set outside of bounds of graphics?
+[ ] consider '__boundsVisual' for Graphics too, because we could lineto a bunch and create a path but without a linestyle or fill it has no actual visible bounds.
+[ ] some kind of warning / error when scale9Grid is set outside of bounds of graphics (like in flash)?
 [ ] FlashGraphics.hx uses drawTriangles for drawQuads, not great. Just use paths?
     public static function drawQuads(graphics:Graphics, rects:Vector<Float>, indices:Vector<Int>, transforms:Vector<Float>):Void
-[ ] check filters, did some stuff to opaqueBackground logic in renderer need to test.
 [ ] alpha masks + cacheasbitmap
 
 [ ] applying transform.colorTransform on object with mask does not invalidate the image.
 [ ] applying transform.colorTransform on shaderFill does nothing too.
+
+[ ] scale9Grid on tiger is very laggy on hashlink target, even moreso on neko
+[ ] check filters, did some stuff to opaqueBackground logic in renderer need to test.
+[ ] masks in DomRenderer are all messed up, esp. scrollRect.
+[ ] check scrollRect in nested objects
+[ ] test Starling
+[ ] todo: Context3DGraphics.hx - batch quads and triangles with same color.
+[ ] webgl opaquebackground not matching bounds drawn by debug view. opaqueBackground position is always slightly off.
+[ ] occasional flicker scale9grid, offset wrong for a SINGLE FRAME, NEVER APPEARS AGAIN UNTIL TEST REINITIALIZE test. WEIRD.

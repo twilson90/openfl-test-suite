@@ -1,6 +1,8 @@
 package;
 
+import openfl.display.SimpleButton;
 import format.SVG;
+import openfl.Assets;
 import openfl.Lib;
 import openfl.Vector;
 import openfl.display.BitmapData;
@@ -8,14 +10,15 @@ import openfl.display.CapsStyle;
 import openfl.display.DisplayObject;
 import openfl.display.DisplayObjectContainer;
 import openfl.display.GradientType;
-import openfl.display.InterpolationMethod;
+import openfl.display.Graphics;
 import openfl.display.GraphicsShader;
+import openfl.display.InterpolationMethod;
 import openfl.display.JointStyle;
 import openfl.display.LineScaleMode;
+import openfl.display.Shape;
 import openfl.display.SpreadMethod;
 import openfl.display.Sprite;
-import openfl.display.Shape;
-import openfl.display.Graphics;
+import openfl.display.Stage3D;
 import openfl.events.Event;
 import openfl.events.KeyboardEvent;
 import openfl.events.MouseEvent;
@@ -27,18 +30,33 @@ import openfl.text.TextField;
 import openfl.text.TextFieldAutoSize;
 import openfl.text.TextFormat;
 import openfl.ui.Keyboard;
-import openfl.utils.Assets;
 
+@:access(openfl.display.Graphics)
 class Main extends Sprite {
 	public var currentIndex = 0;
 	public var pause = false;
 	public var showBounds:Bool = false;
 	public var showColorTransform:Bool = false;
 	public var showMask:Bool = false;
+	public var _scrollRect:Rectangle = new Rectangle(0, 0, 0, 0);
+	public var showScrollRect:Bool = false;
+	public var showFilters:Bool = false;
 	public var showHitTestMarkers:Bool = false;
 	public var showOpaqueBackgrounds:Bool = false;
-	public var current:Test;
+	public var test:Test;
 	public var tests:Array<Dynamic> = [
+		// SimpleButtonTest,
+		// Scale9Test,
+		// Crisp1PixelStrokeTest,
+		// Scale9Test,
+		// GraphicsTest1,
+		// Crisp1PixelStrokeTest,
+		// BoundsTest,
+		// GLBatchTest,
+		// MiterBoundsTest,
+		// GradientTest,
+		// SpinningTest,
+		// SVGTest,
 		// -----------
 		PathAndDrawShapeTest,
 		FillLineStyleOrderTest,
@@ -58,6 +76,9 @@ class Main extends Sprite {
 		ShaderFillTest,
 		AlphaMaskTest,
 		ComplexMaskTest,
+		FrameTimingTest2,
+		WeirdScaleGlitchTest,
+		// FrameTimingTest1,
 	];
 
 	public var testContainer = new Sprite();
@@ -84,8 +105,16 @@ class Main extends Sprite {
 	public var emptyColorTransform = new ColorTransform();
 	public var colorTransform = new ColorTransform(0.5, 0.5, 0.5, 1.0);
 
+	static public var bd1:BitmapData;
+	static public var bd2:BitmapData;
+
 	public function new() {
 		super();
+
+		bd1 = Assets.getBitmapData("assets/texture.png");
+		bd2 = new BitmapData(bd1.width, bd1.height, true, 0);
+		bd2.copyPixels(bd1, bd1.rect, new Point());
+		bd2.colorTransform(bd2.rect, new ColorTransform(1, 1, 1, 0.5));
 
 		addChild(testContainer);
 		addChild(boundsSprite);
@@ -96,7 +125,9 @@ class Main extends Sprite {
 		// maskSprite.graphics.drawRect(-200,-100,400,200);
 		addChild(maskSprite);
 
-		var funcMap = [
+		var stage = Lib.current.stage;
+
+		var funcMap:Array<FuncWrapper> = [
 			{
 				name: "Previous Test",
 				key: Keyboard.LEFT,
@@ -113,49 +144,93 @@ class Main extends Sprite {
 				name: "Toggle OpaqueBackground",
 				key: Keyboard.NUMBER_1,
 				keyName: "1",
-				func: toggleOpaqueBackgrounds
+				func: toggleOpaqueBackgrounds,
+				value: () -> showOpaqueBackgrounds
 			},
 			{
 				name: "Toggle Bounds",
 				key: Keyboard.NUMBER_2,
 				keyName: "2",
-				func: toggleBounds
+				func: toggleBounds,
+				value: () -> showBounds
 			},
 			{
 				name: "Toggle ColorTransform",
 				key: Keyboard.NUMBER_3,
 				keyName: "3",
-				func: toggleColorTransform
+				func: toggleColorTransform,
+				value: () -> showColorTransform
 			},
 			{
 				name: "Toggle Mask",
 				key: Keyboard.NUMBER_4,
 				keyName: "4",
-				func: toggleMask
+				func: toggleMask,
+				value: () -> showMask
+			},
+			{
+				name: "Toggle scrollRect",
+				key: Keyboard.NUMBER_5,
+				keyName: "5",
+				func: toggleScrollRect,
+				value: () -> showScrollRect
 			},
 			{
 				name: "Toggle HitTest Markers",
-				key: Keyboard.NUMBER_5,
-				keyName: "5",
-				func: toggleHitTestMarkers
+				key: Keyboard.NUMBER_6,
+				keyName: "6",
+				func: toggleHitTestMarkers,
+				value: () -> showHitTestMarkers
+			},
+			{
+				name: "Toggle Filters",
+				key: Keyboard.NUMBER_7,
+				keyName: "7",
+				func: toggleFilters,
+				value: () -> showFilters
 			},
 			{
 				name: "Pause Animations",
 				key: Keyboard.SPACE,
 				keyName: "Space",
-				func: togglePause
+				func: togglePause,
+				value: () -> pause
 			},
 			{
-				name: "Clear HitTest Markers",
-				key: Keyboard.DELETE,
-				keyName: "Delete",
-				func: clearHitTestSprite
+				name: "Next Frame",
+				key: Keyboard.PERIOD,
+				keyName: ">",
+				func: _nextFrame
 			},
+			/* {
+				name: "Toggle VSync",
+				key: Keyboard.V,
+				keyName: "V",
+				func: toggleVSync
+			},*/
 		];
+		#if cpp
+		var profiling = false;
+		function toggleProfiler() {
+			if (profiling) {
+				cpp.vm.Profiler.stop();
+			} else {
+				cpp.vm.Profiler.start("profile-" + Std.int(Date.now().getTime()) + ".json");
+			}
+			profiling = !profiling;
+		}
+		funcMap.push({
+			name: "Toggle CPP Profiler",
+			key: Keyboard.P,
+			keyName: "P",
+			func: toggleProfiler,
+			value: () -> profiling
+		});
+		#end
 
-		var getTestFuncMap = () -> funcMap.concat(current.funcMap);
+		var getTestFuncMap = () -> funcMap.concat(test.funcMap);
 
-		Lib.current.stage.addEventListener(KeyboardEvent.KEY_UP, function(e:KeyboardEvent) {
+		stage.addEventListener(KeyboardEvent.KEY_UP, function(e:KeyboardEvent) {
 			for (o in getTestFuncMap()) {
 				if (e.keyCode == cast o.key) {
 					o.func();
@@ -165,57 +240,57 @@ class Main extends Sprite {
 
 		var instructions = new TextField();
 		formatTextField(instructions);
-		addChild(instructions);
 
 		var currentTestTextField = new TextField();
 		formatTextField(currentTestTextField);
-		addChild(currentTestTextField);
 
 		var infoTF = new TextField();
 		formatTextField(infoTF);
-		addChild(infoTF);
 		infoTF.text = " ";
 
 		var ft = new FrameTimeGraph(testContainer);
+
+		addChild(instructions);
+		addChild(currentTestTextField);
+		addChild(infoTF);
 		addChild(ft);
 
-		Lib.current.stage.addEventListener(MouseEvent.MOUSE_DOWN, function(e:MouseEvent) {
-			current.onMouseDown(e);
+		stage.addEventListener(MouseEvent.MOUSE_DOWN, function(e:MouseEvent) {
+			test.onMouseDown(e);
 		});
-		Lib.current.stage.addEventListener(MouseEvent.MOUSE_MOVE, function(e:MouseEvent) {
-			current.onMouseMove(e);
+		stage.addEventListener(MouseEvent.MOUSE_MOVE, function(e:MouseEvent) {
+			test.onMouseMove(e);
 		});
-		Lib.current.stage.addEventListener(MouseEvent.MOUSE_UP, function(e:MouseEvent) {
-			current.onMouseUp(e);
+		stage.addEventListener(MouseEvent.MOUSE_UP, function(e:MouseEvent) {
+			test.onMouseUp(e);
 		});
-		Lib.current.stage.addEventListener(KeyboardEvent.KEY_UP, function(e:KeyboardEvent) {
-			current.onKeyDown(e);
+		stage.addEventListener(KeyboardEvent.KEY_UP, function(e:KeyboardEvent) {
+			test.onKeyDown(e);
 		});
-		Lib.current.stage.addEventListener(KeyboardEvent.KEY_DOWN, function(e:KeyboardEvent) {
-			current.onKeyUp(e);
+		stage.addEventListener(KeyboardEvent.KEY_DOWN, function(e:KeyboardEvent) {
+			test.onKeyUp(e);
 		});
 
 		var i = 0;
 		var hitTest = false;
+
 		addEventListener(Event.ENTER_FRAME, function(e:Event) {
 			if (!pause) {
-				current.onEnterFrame(e);
+				test.onEnterFrame(e);
 				if (showMask) {
-					maskSprite.x = Lib.current.stage.mouseX;
-					maskSprite.y = Lib.current.stage.mouseY;
+					maskSprite.x = stage.mouseX;
+					maskSprite.y = stage.mouseY;
 					maskSprite.scaleX = maskSprite.scaleY = Math.sin(i * Math.PI / 180);
 					maskSprite.rotation = i * 2;
 				}
+				_scrollRect.width = 500;
+				_scrollRect.height = 500;
+				_scrollRect.x = Math.sin(i * Math.PI / 180) * 250;
+				_scrollRect.y = Math.sin(i * Math.PI / 180) * 250;
 				i++;
 			}
 
-			if (current.center) {
-				var bounds = current.getBounds(current);
-				current.x = Math.round((Lib.current.stage.stageWidth - bounds.width) / 2.0 - bounds.x);
-				current.y = Math.round((Lib.current.stage.stageHeight - bounds.height) / 2.0 - bounds.y);
-			}
-
-			var newHitTest = current.hitTestPoint(stage.mouseX, stage.mouseY, true);
+			var newHitTest = test.hitTestPoint(stage.mouseX, stage.mouseY, true);
 
 			if (showHitTestMarkers) {
 				if (newHitTest && !hitTest) {
@@ -229,17 +304,25 @@ class Main extends Sprite {
 				// "GL: " + (hardwareDrawable == 0 ? "NO" : hardwareDrawable == 1 ? "PARTIAL" : "FULL"),
 				"HIT: " + (newHitTest ? "YES" : "NO")
 			].join(", ");
-			infoTF.y = Lib.current.stage.stageHeight - infoTF.height;
+			infoTF.y = stage.stageHeight - infoTF.height;
 
 			maskSprite.visible = showMask;
-			current.mask = showMask ? maskSprite : null;
+			test.mask = showMask ? maskSprite : null;
 
-			current.transform.colorTransform = showColorTransform ? colorTransform : emptyColorTransform;
+			test.scrollRect = showScrollRect ? _scrollRect : null;
+
+			test.transform.colorTransform = showColorTransform ? colorTransform : emptyColorTransform;
+
+			if (test.center) {
+				var bounds = test.getBounds(test);
+				test.x = Math.floor((stage.stageWidth - bounds.width) / 2.0 - bounds.x);
+				test.y = Math.floor((stage.stageHeight - bounds.height) / 2.0 - bounds.y);
+			}
 
 			Utils.clear(boundsSprite);
 
 			if (showBounds) {
-				var allChildren = Utils.getDescendents(current, true);
+				var allChildren = Utils.getDescendents(test, true);
 				var maskMap = new Map<DisplayObject, DisplayObject>();
 				for (c in allChildren) {
 					if (c.mask != null) {
@@ -254,35 +337,36 @@ class Main extends Sprite {
 					drawBounds(c);
 				}
 			}
-			showOpaqueBackground(current, showOpaqueBackgrounds);
+			showOpaqueBackground(test, showOpaqueBackgrounds);
 
 			var str = Type.getClassName(tests[currentIndex]);
-			if (current.info != null) {
-				str += ": " + current.info;
+			if (test.info != null) {
+				str += ": " + test.info;
 			}
 			currentTestTextField.text = str;
 
 			instructions.text = getTestFuncMap().map((f) -> {
-				return f.keyName + " → " + f.name;
+				var value = f.value != null ? f.value() : null;
+				return f.keyName + " → " + f.name + (value != null ? " (" + (value ? "ON" : "OFF") + ")" : "");
 			}).join("\n");
-			instructions.x = Lib.current.stage.stageWidth - instructions.width;
+			instructions.x = stage.stageWidth - instructions.width;
 			instructions.y = 0;
 
-			ft.x = Lib.current.stage.stageWidth - ft.width;
-			ft.y = Lib.current.stage.stageHeight - ft.height;
+			ft.x = stage.stageWidth - ft.width;
+			ft.y = stage.stageHeight - ft.height;
 		});
 		loadTest();
 	}
 
 	public function loadTest() {
-		if (current != null) {
-			current.destroy();
+		if (test != null) {
+			test.destroy();
 		}
 		clearHitTestSprite();
 		var test_clazz = tests[currentIndex];
-		current = cast Type.createInstance(test_clazz, []);
-		testContainer.addChild(current);
-		current.init();
+		test = cast Type.createInstance(test_clazz, []);
+		testContainer.addChild(test);
+		test.init();
 	}
 
 	function formatTextField(textfield:TextField) {
@@ -332,14 +416,38 @@ class Main extends Sprite {
 		showMask = !showMask;
 	}
 
+	function toggleScrollRect() {
+		showScrollRect = !showScrollRect;
+	}
+
 	function toggleHitTestMarkers() {
 		showHitTestMarkers = !showHitTestMarkers;
 		if (!showHitTestMarkers)
 			clearHitTestSprite();
 	}
 
+	function toggleFilters() {
+		showFilters = !showFilters;
+		if (showFilters) {
+			testContainer.filters = [new openfl.filters.BlurFilter(5, 5), new openfl.filters.BevelFilter()];
+		} else {
+			testContainer.filters = [];
+		}
+	}
+
 	function togglePause() {
 		pause = !pause;
+	}
+
+	function _nextFrame() {
+		pause = false;
+		var nextFrame:Dynamic;
+		nextFrame = (e:Event) -> {
+			removeEventListener(Event.ENTER_FRAME, nextFrame);
+			pause = true;
+			return;
+		};
+		addEventListener(Event.ENTER_FRAME, nextFrame);
 	}
 
 	function clearHitTestSprite() {
@@ -351,43 +459,52 @@ class Main extends Sprite {
 		var g = boundsSprite.graphics;
 
 		var bounds = displayObject.getBounds(this);
-		Utils.roundRect(bounds);
 		var rect = displayObject.getRect(this);
-		Utils.roundRect(rect);
 		var origin = displayObject.localToGlobal(new Point());
-		Utils.roundPoint(origin);
 		var crosshairSize = 4.0;
 
-		g.lineStyle(1, 0xff0000);
-		g.drawRect(bounds.x, bounds.y, bounds.width, bounds.height);
-		g.lineStyle(1, 0x00ff00);
-		g.drawRect(rect.x, rect.y, rect.width, rect.height);
-		g.lineStyle(1, 0xFF00FF);
-		g.moveTo(origin.x, origin.y - crosshairSize);
-		g.lineTo(origin.x, origin.y + crosshairSize);
-		g.moveTo(origin.x - crosshairSize, origin.y);
-		g.lineTo(origin.x + crosshairSize, origin.y);
 		var flags = [];
 
+		// var boundsStr = [
+		// 	Std.string(Math.round(bounds.x)),
+		// 	Std.string(Math.round(bounds.y)),
+		// 	Std.string(Math.round(bounds.width)),
+		// 	Std.string(Math.round(bounds.height))
+		// ].join(":");
+		// flags.push(boundsStr);
+
 		#if !flash
-		if (stage.window.context.type == lime.graphics.RenderContextType.OPENGL) {
-			if (Utils.hasGraphics(displayObject)) {
-				var g = Utils.getGraphics(displayObject);
-				if (Utils.isHardwareCompatible(g)) {
-					flags.push("GL");
-				} else {
-					#if lime_cairo
-					flags.push("cairo");
-					#else
-					flags.push("canvas");
-					#end
-				}
+		if (Utils.hasGraphics(displayObject)) {
+			var g = Utils.getGraphics(displayObject);
+			if (Std.string(stage.window.context.type).indexOf("gl") != -1 && Utils.isHardwareCompatible(g)) {
+				flags.push(stage.window.context.type);
+			} else {
+				#if lime_cairo
+				flags.push("cairo");
+				#else
+				flags.push("canvas");
+				#end
 			}
 		}
 		#end
 
+		Utils.roundRect(bounds);
+		Utils.roundRect(rect);
+		Utils.roundPoint(origin);
+		var lineAlpha = 0.75;
+
+		g.lineStyle(1, 0xff0000, lineAlpha);
+		g.drawRect(bounds.x, bounds.y, bounds.width, bounds.height);
+		g.lineStyle(1, 0x00ff00, lineAlpha);
+		g.drawRect(rect.x, rect.y, rect.width, rect.height);
+		g.lineStyle(1, 0xFF00FF, lineAlpha);
+		g.moveTo(origin.x, origin.y - crosshairSize);
+		g.lineTo(origin.x, origin.y + crosshairSize);
+		g.moveTo(origin.x - crosshairSize, origin.y);
+		g.lineTo(origin.x + crosshairSize, origin.y);
+
 		if (Utils.isValidScale9(displayObject)) {
-			g.lineStyle(1, 0x0000FF);
+			g.lineStyle(1, 0x0000FF, lineAlpha);
 
 			var scale9Rect = Utils.getScale9GridRect(displayObject);
 			Utils.roundRect(scale9Rect);
@@ -425,6 +542,14 @@ class Main extends Sprite {
 	}
 }
 
+typedef FuncWrapper = {
+	name:String,
+	key:Int,
+	keyName:String,
+	func:() -> Void,
+	?value:() -> Bool
+}
+
 class Test extends Sprite {
 	public var onMouseUp = (e:MouseEvent) -> {};
 	public var onMouseDown = (e:MouseEvent) -> {};
@@ -435,12 +560,7 @@ class Test extends Sprite {
 	public var onDestroy = () -> {};
 	public var info:String;
 	public var center:Bool = true;
-	public var funcMap:Array<{
-		name:String,
-		key:Int,
-		keyName:String,
-		func:() -> Void
-	}> = [];
+	public var funcMap:Array<FuncWrapper> = [];
 
 	public function new() {
 		super();
@@ -456,14 +576,28 @@ class Test extends Sprite {
 	}
 }
 
+class BoundsTest extends Test {
+	override public function init() {
+		center = false;
+		var s = new Sprite();
+		s.graphics.lineStyle(1, 0.5);
+		s.name = "thing";
+		var offsetX = 100;
+		var offsetY = 100;
+		for (x in 1...10) {
+			s.graphics.drawRect(offsetX, offsetY, x, x);
+			offsetX += x + 10;
+		}
+		addChild(s);
+	}
+}
+
 class SpinningTest extends Test {
 	override public function init() {
-		var bmpData = Assets.getBitmapData("assets/texture.png").clone();
-
 		var s = new Sprite();
 		s.name = "thing";
 		// s.graphics.lineStyle(20, 0xff0000);
-		s.graphics.beginBitmapFill(bmpData, new Matrix(2, 0, 0, 2, 50, 50), true, true);
+		s.graphics.beginBitmapFill(Main.bd1, new Matrix(2, 0, 0, 2, 50, 50), true, true);
 		s.graphics.drawRect(0, 0, 200, 200);
 		s.graphics.endFill();
 		// s.cacheAsBitmap = true;
@@ -471,44 +605,66 @@ class SpinningTest extends Test {
 
 		var i = 0;
 		onEnterFrame = function(e:Event) {
-			s.rotation = i * 2;
+			s.rotation = (i * 2) % 360;
 			s.scaleX = s.scaleY = Math.abs(Math.sin(i * Math.PI / 180));
 			i++;
 		};
 	}
 }
 
-class Scale9Test extends Test {
-	static var bd2:BitmapData;
+class SimpleButtonTest extends Test {
+	override public function init() {
+		var downState = new Sprite();
+		downState.graphics.lineStyle(20);
+		downState.graphics.beginBitmapFill(Main.bd1, new Matrix(2, 0, 0, 2, 50, 50), true, true);
+		downState.graphics.drawRect(0, 0, 200, 200);
+		downState.graphics.endFill();
+		var overState = new Sprite();
+		overState.graphics.lineStyle(10);
+		overState.graphics.beginBitmapFill(Main.bd2, new Matrix(2, 0, 0, 2, 50, 50), true, true);
+		overState.graphics.drawRect(0, 0, 200, 200);
+		overState.graphics.endFill();
+		var upState = new Sprite();
+		upState.graphics.beginBitmapFill(Main.bd2, new Matrix(2, 0, 0, 2, 50, 50), true, true);
+		upState.graphics.drawRect(0, 0, 200, 200);
+		upState.graphics.endFill();
 
+		var s = new SimpleButton(upState, overState, downState, upState);
+		addChild(s);
+	}
+}
+
+class Scale9Test extends Test {
 	override function init() {
 		center = false;
-		var bd1 = Assets.getBitmapData("assets/texture.png");
 		var s1 = new Sprite();
-		if (bd2 == null) {
-			bd2 = new BitmapData(bd1.width, bd1.height, true, 0);
-			bd2.copyPixels(bd1, bd1.rect, new Point());
-			bd2.colorTransform(bd2.rect, new ColorTransform(1, 1, 1, 0.5));
-		}
+		s1.name = "s9grid";
 		var width = 200.0;
 		var height = 200.0;
 		var offset = new Point(100, 100);
+		var scale9Grid = new Rectangle(offset.x + width / 4, offset.y + height / 4, width / 2, height / 2);
 
 		var strokes = true;
+		var useScale9Grid = false;
+		var thickness = 50.0;
 
 		var draw = () -> {
 			s1.graphics.clear();
 			if (strokes) {
-				s1.graphics.lineStyle(20);
-				s1.graphics.lineBitmapStyle(bd2, new Matrix(2, 0, 0, 2));
+				s1.graphics.lineStyle(thickness);
+				s1.graphics.lineBitmapStyle(Main.bd2, new Matrix(2, 0, 0, 2));
 			}
-			s1.graphics.beginBitmapFill(bd1, new Matrix(1, 0, 0, 1), true, false);
+			s1.graphics.beginBitmapFill(Main.bd1, new Matrix(1, 0, 0, 1), true, false);
 			s1.graphics.drawRoundRect(offset.x, offset.y, width, height, width / 4, height / 4);
 			s1.graphics.endFill();
 		}
 		var toggleStrokes = () -> {
 			strokes = !strokes;
 			draw();
+		}
+		var toggleScale9Grid = () -> {
+			useScale9Grid = !useScale9Grid;
+			s1.scale9Grid = useScale9Grid ? scale9Grid : null;
 		}
 
 		draw();
@@ -517,19 +673,104 @@ class Scale9Test extends Test {
 			name: "Toggle Stroke",
 			key: Keyboard.S,
 			keyName: "S",
-			func: toggleStrokes
+			func: toggleStrokes,
+			value: () -> strokes
 		});
 
-		var scale9Grid = new Rectangle(offset.x + width / 4, offset.y + height / 4, width / 2, height / 2);
-		addChild(s1);
-		s1.scale9Grid = scale9Grid;
-		s1.scaleX = 2.0;
-		s1.x = 100.5;
-		s1.y = 100.5;
+		funcMap.push({
+			name: "Toggle Scale9Grid",
+			key: Keyboard.G,
+			keyName: "G",
+			func: toggleScale9Grid,
+			value: () -> useScale9Grid
+		});
 
+		addChild(s1);
+		s1.x = 200.5;
+		s1.y = 200.5;
+
+		toggleScale9Grid();
+
+		var i = 0;
 		onEnterFrame = function(e:Event) {
 			s1.scaleX = (stage.mouseX - s1.x) / width;
 			s1.scaleY = (stage.mouseY - s1.y) / height;
+			// trace(s1.scaleX, s1.scaleY);
+		};
+	}
+}
+
+class WeirdScaleGlitchTest extends Test {
+	override function init() {
+		var s1 = new Sprite();
+		info = "This test shows a weird glitch in Cairo where applying specific scaling results in partial clipping on edges";
+		s1.name = "wtf";
+
+		s1.graphics.lineStyle(50);
+		s1.graphics.beginFill(0xff0000);
+		s1.graphics.drawCircle(0, 0, 100);
+		s1.graphics.endFill();
+
+		s1.graphics.lineStyle(1, 0x00ff00);
+		s1.graphics.drawCircle(0, 0, 100);
+
+		var unfucked = false;
+		var axisSwitch = false;
+
+		var toggleAxis = () -> {
+			axisSwitch = !axisSwitch;
+		}
+
+		funcMap.push({
+			name: "Switch Axis",
+			key: Keyboard.A,
+			keyName: "A",
+			func: toggleAxis,
+			value: () -> axisSwitch
+		});
+		var sx = 2.7925;
+		var sy = 0.3575;
+		// var sx = 2.2075;
+		// var sy = 0.4475;
+
+		var inc = 0.01;
+
+		funcMap.push({
+			name: "ScaleX+",
+			key: Keyboard.X,
+			keyName: "X",
+			func: () -> sx += inc,
+		});
+		funcMap.push({
+			name: "ScaleX-",
+			key: Keyboard.Z,
+			keyName: "Z",
+			func: () -> sx -= inc,
+		});
+
+		funcMap.push({
+			name: "ScaleY+",
+			key: Keyboard.Y,
+			keyName: "Y",
+			func: () -> sy += inc,
+		});
+		funcMap.push({
+			name: "ScaleY-",
+			key: Keyboard.T,
+			keyName: "T",
+			func: () -> sy -= inc,
+		});
+
+		addChild(s1);
+
+		onEnterFrame = function(e:Event) {
+			if (axisSwitch) {
+				s1.scaleX = sy;
+				s1.scaleY = sx;
+			} else {
+				s1.scaleX = sx;
+				s1.scaleY = sy;
+			}
 		};
 	}
 }
@@ -566,7 +807,6 @@ class Scale9Test2 extends Test {
 
 class Scale9Test3 extends Test {
 	override function init() {
-		var bmpData = Assets.getBitmapData("assets/texture.png");
 		center = false;
 
 		var s = new Sprite();
@@ -579,8 +819,8 @@ class Scale9Test3 extends Test {
 
 		var drawRect = (x:Float, y:Float, w:Float, h:Float) -> {
 			var m = new Matrix();
-			m.createBox(w / bmpData.width, h / bmpData.height, 0, x, y);
-			s.graphics.beginBitmapFill(bmpData, m, true, false);
+			m.createBox(w / Main.bd1.width, h / Main.bd1.height, 0, x, y);
+			s.graphics.beginBitmapFill(Main.bd1, m, true, false);
 			s.graphics.drawRect(x, y, w, h);
 			s.graphics.endFill();
 		}
@@ -614,30 +854,30 @@ class Scale9Test3 extends Test {
 
 class Crisp1PixelStrokeTest extends Test {
 	override function init() {
-		var s = new Sprite();
+		var s1 = new Sprite();
 		center = false;
 
 		info = "The line should be crisp and not antialiased.";
 
-		addChild(s);
+		addChild(s1);
+
+		// var s2 = new Sprite();
+		// s2.graphics.lineStyle(0.5);
+		// s2.graphics.moveTo(50.5, 50.5);
+		// s2.graphics.lineTo(150.5, 50.5);
+		// addChild(s2);
+
 		onEnterFrame = function(e:Event) {
-			var offset = 100.0;
-			s.graphics.clear();
-			s.graphics.lineStyle(1);
-			s.graphics.drawRect(offset, offset, stage.mouseX - offset, stage.mouseY - offset);
+			var offset = 100;
+			s1.graphics.clear();
+			s1.graphics.lineStyle(1, 0.5);
+			s1.graphics.drawRect(offset, offset, stage.mouseX - offset, stage.mouseY - offset);
 		};
 	}
 }
 
 class GraphicsTest1 extends Test {
 	override public function init() {
-		var bmpData = Assets.getBitmapData("assets/texture.png");
-
-		var cx:Float = 250;
-		var cy:Float = 250;
-		var rOuter:Float = 150;
-		var rInner:Float = 60;
-
 		// g.drawTriangles(Vector.ofArray(vertices), Vector.ofArray(indices)); // , Vector.ofArray(uvtData)
 		var vertices:Array<Float> = [0, 0, 200, 0, 200, 200, 0, 200];
 		var indices = [0, 1, 2, 0, 2, 3];
@@ -645,7 +885,7 @@ class GraphicsTest1 extends Test {
 		var uvtData:Array<Float> = [0, 0, 0.5, 0, 1, 2, 0, 1];
 
 		var triSprite = new Sprite();
-		triSprite.graphics.beginBitmapFill(bmpData);
+		triSprite.graphics.beginBitmapFill(Main.bd1);
 		triSprite.graphics.lineStyle(10, 0x006E3D, 0.5);
 
 		var v = Vector.ofArray(vertices);
@@ -657,7 +897,7 @@ class GraphicsTest1 extends Test {
 		addChild(triSprite);
 
 		var triSprite2 = new Sprite();
-		triSprite2.graphics.beginBitmapFill(bmpData, new Matrix(1, 0, 0, 1, 50, 50));
+		triSprite2.graphics.beginBitmapFill(Main.bd1, new Matrix(1, 0, 0, 1, 50, 50));
 		triSprite2.graphics.lineStyle(10, 0x006E3D, 0.5);
 		triSprite2.graphics.drawTriangles(v, i);
 		triSprite2.y = triSprite.y + triSprite.height + 50;
@@ -666,7 +906,7 @@ class GraphicsTest1 extends Test {
 		var s = new Sprite();
 		s.x = 200;
 		s.y = 200;
-		s.graphics.beginBitmapFill(bmpData, new Matrix());
+		s.graphics.beginBitmapFill(Main.bd1, new Matrix());
 		s.graphics.drawRoundRect(0, 0, 200, 200, 50, 50);
 		s.graphics.endFill();
 		addChild(s);
@@ -693,7 +933,7 @@ class GraphicsTest1 extends Test {
 
 		var i = 0;
 		onEnterFrame = function(e:Event) {
-			s.rotation = i * 2;
+			s.rotation = (i * 2) % 360;
 			s2.scaleX = s2.scaleY = Math.abs(Math.sin(i * Math.PI / 180));
 			i++;
 		};
@@ -835,20 +1075,59 @@ class SVGTest extends Test {
 		addChild(spr);
 
 		var scale9Grid = false;
+		var rotation = false;
+		var scaling = false;
 		function toggleScale9Grid() {
 			scale9Grid = !scale9Grid;
+		}
+		function toggleRotation() {
+			rotation = !rotation;
+		}
+		function toggleScaling() {
+			scaling = !scaling;
+		}
+		function toggleCacheAsBitmap() {
+			spr.cacheAsBitmap = !spr.cacheAsBitmap;
 		}
 		funcMap.push({
 			name: "Toggle Scale9Grid",
 			key: Keyboard.S,
 			keyName: "S",
-			func: toggleScale9Grid
+			func: toggleScale9Grid,
+			value: () -> scale9Grid
+		});
+		funcMap.push({
+			name: "Toggle Rotation",
+			key: Keyboard.R,
+			keyName: "R",
+			func: toggleRotation,
+			value: () -> rotation
+		});
+		funcMap.push({
+			name: "Toggle Scaling",
+			key: Keyboard.G,
+			keyName: "G",
+			func: toggleScaling,
+			value: () -> scaling
+		});
+		funcMap.push({
+			name: "Toggle CacheAsBitmap",
+			key: Keyboard.C,
+			keyName: "C",
+			func: toggleCacheAsBitmap,
+			value: () -> spr.cacheAsBitmap
 		});
 
 		var i = 0;
 		onEnterFrame = (e:Event) -> {
 			i++;
-			if (scale9Grid) {
+			if (rotation) {
+				spr.rotation = (i / 60.0 * 180.0) % 360;
+			}
+			if (scaling) {
+				spr.scaleX = 0.5 + Math.abs(Math.sin(i * 0.01)) * 0.5;
+				spr.scaleY = 0.5 + Math.abs(Math.cos(i * 0.01)) * 0.5;
+			} else if (scale9Grid) {
 				var r = spr.getRect(spr);
 				r.inflate(-r.width / 4, -r.height / 4);
 				spr.scale9Grid = r;
@@ -873,7 +1152,6 @@ class TigerSprite extends Sprite {
 class DrawQuadsTest extends Test {
 	override public function init() {
 		var g = graphics;
-		var bmpData = Assets.getBitmapData("assets/texture.png");
 
 		var rects:Array<Float> = [
 			  0,   0, 100, 100,
@@ -887,7 +1165,7 @@ class DrawQuadsTest extends Test {
 			0.7071, 0.7071, -0.7071, 0.7071, 200, 200,
 		];
 		// g.lineStyle(10, 0xff0000);
-		g.beginBitmapFill(bmpData, new Matrix(1, 0, 0, 1, 0, 0));
+		g.beginBitmapFill(Main.bd1, new Matrix(1, 0, 0, 1, 0, 0));
 		// g.beginFill(0x00FF00);
 		g.drawQuads(Vector.ofArray(rects), Vector.ofArray(indices), Vector.ofArray(transforms));
 		g.endFill();
@@ -901,22 +1179,50 @@ class DrawQuadsTest extends Test {
 
 class MiterBoundsTest extends Test {
 	override public function init() {
-		var triangle:Sprite = new Sprite();
-		triangle.graphics.lineStyle(50, 0xFF0000, 0.5, true, LineScaleMode.NORMAL, CapsStyle.NONE, JointStyle.BEVEL, Math.PI / 180 * 90);
+		info = "Note: The bevel in miter joints that exceed the miter limit are shallower in Flash. This cannot be recreated in Canvas / Cairo";
 
 		var triangleSide = 100.0;
-		triangle.graphics.beginFill(0x0000ff);
-		triangle.graphics.lineTo(0, triangleSide);
-		triangle.graphics.lineTo(triangleSide, triangleSide);
-		triangle.graphics.lineTo(0, 0);
-		triangle.graphics.endFill();
+		var t1:Sprite = new Sprite();
+		t1.graphics.lineStyle(50, 0xFF0000, 0.5, true, LineScaleMode.NORMAL, CapsStyle.NONE, JointStyle.BEVEL, Math.PI / 180 * 90);
+		t1.graphics.beginFill(0x0000ff);
+		t1.graphics.lineTo(0, triangleSide);
+		t1.graphics.lineTo(triangleSide, triangleSide);
+		t1.graphics.endFill();
+		addChild(t1);
 
-		triangle.graphics.moveTo(150, 150);
-		triangle.graphics.lineTo(250, 150);
-		triangle.graphics.lineTo(350, 50);
-		triangle.graphics.lineTo(450, 150);
+		var t2:Sprite = new Sprite();
+		t2.graphics.lineStyle(50, 0xFF0000, 0.5, true, LineScaleMode.NORMAL, CapsStyle.NONE, JointStyle.BEVEL);
+		t2.graphics.lineTo(0, triangleSide);
+		t2.graphics.lineTo(triangleSide, triangleSide);
+		t2.graphics.lineTo(0, 0);
+		addChild(t2);
+		t2.x = 150;
 
-		addChild(triangle);
+		var t3:Sprite = new Sprite();
+		t3.graphics.lineStyle(50, 0xFF0000, 0.5, true, LineScaleMode.NORMAL, CapsStyle.NONE, JointStyle.MITER, Math.PI);
+		t3.graphics.lineTo(0, triangleSide);
+		t3.graphics.lineTo(triangleSide, triangleSide);
+		t3.graphics.lineTo(0, 0);
+		addChild(t3);
+		t3.x = 300;
+
+		var t4:Sprite = new Sprite();
+		t4.graphics.lineStyle(50, 0xFF0000, 0.5, true, LineScaleMode.NORMAL, CapsStyle.NONE, JointStyle.MITER, Math.PI / 180 * 90);
+		t4.graphics.lineTo(0, triangleSide);
+		t4.graphics.lineTo(triangleSide, triangleSide);
+		t4.graphics.lineTo(0, 0);
+		addChild(t4);
+		t4.x = 450;
+
+		var line:Sprite = new Sprite();
+		line.graphics.lineStyle(50, 0xFF0000, 0.5, true, LineScaleMode.NORMAL, CapsStyle.NONE, JointStyle.BEVEL, Math.PI / 180 * 90);
+		line.graphics.moveTo(0, 0);
+		line.graphics.lineTo(100, 0);
+		line.graphics.lineTo(200, 100);
+		line.graphics.lineTo(300, 0);
+		addChild(line);
+		line.x = 300;
+		line.y = 200;
 
 		var ob = new Sprite();
 
@@ -936,8 +1242,30 @@ class MiterBoundsTest extends Test {
 		ob.graphics.curveTo(200, 0, 250, 0);
 		ob.graphics.endFill();
 		addChild(ob);
-		ob.x = 100;
+		ob.x = 0;
 		ob.y = 200;
+
+		var createX = (capsStyle:CapsStyle) -> {
+			var ob = new Sprite();
+			ob.graphics.lineStyle(20, 0xFF0000, 0.5, true, LineScaleMode.NORMAL, capsStyle, JointStyle.MITER);
+			ob.graphics.moveTo(0, 0);
+			ob.graphics.lineTo(100, 100);
+			ob.graphics.moveTo(100, 0);
+			ob.graphics.lineTo(0, 100);
+			addChild(ob);
+			return ob;
+		}
+		var ob2 = createX(CapsStyle.NONE);
+		ob2.x = 0;
+		ob2.y = 400;
+
+		var ob3 = createX(CapsStyle.ROUND);
+		ob3.x = 200;
+		ob3.y = 400;
+
+		var ob4 = createX(CapsStyle.SQUARE);
+		ob4.x = 400;
+		ob4.y = 400;
 	}
 }
 
@@ -956,14 +1284,12 @@ class GradientTest extends Test {
 		var strokes = true;
 		var draw = () -> {
 			oval.graphics.clear();
+			oval.graphics.beginGradientFill(GradientType.RADIAL, [0xFF0000, 0x0000FF], [1.0, 1.0], [0, 255], matrix, SpreadMethod.PAD,
+				InterpolationMethod.RGB, 1);
 			if (strokes) {
-				oval.graphics.beginGradientFill(GradientType.RADIAL, [0xFF0000, 0x0000FF], [1.0, 1.0], [0, 255], matrix, SpreadMethod.PAD,
-					InterpolationMethod.RGB, 1);
 				oval.graphics.lineStyle(10);
 				oval.graphics.lineGradientStyle(GradientType.LINEAR, [0x000000, 0xAA1D5F], [1.0, 1.0], [0, 255], matrix2);
-			} else {
-				oval.graphics.beginFill(0xff0000);
-			}
+			} else {}
 			oval.graphics.drawEllipse(-w / 2, -h / 2, w, h);
 			oval.graphics.endFill();
 		}
@@ -985,7 +1311,7 @@ class GradientTest extends Test {
 
 		var i = 0.0;
 		onEnterFrame = function(e:Event) {
-			oval.rotation = i * 100;
+			oval.rotation = (i * 100) % 360;
 			oval.scaleX = oval.scaleY = 1 + Math.sin(i) * 0.25;
 			i += 0.01;
 		};
@@ -994,12 +1320,11 @@ class GradientTest extends Test {
 
 class AlphaMaskTest extends Test {
 	override public function init() {
-		var bmpData = Assets.getBitmapData("assets/texture.png");
 		var w = 400;
 		var h = 400;
 
 		var spr = new Sprite();
-		spr.graphics.beginBitmapFill(bmpData, new Matrix(1, 0, 0, 1, 0, 0));
+		spr.graphics.beginBitmapFill(Main.bd1, new Matrix(1, 0, 0, 1, 0, 0));
 		spr.graphics.drawRect(0, 0, w, h);
 		spr.cacheAsBitmap = true;
 		addChild(spr);
@@ -1019,8 +1344,7 @@ class AlphaMaskTest extends Test {
 
 class ComplexMaskTest extends Test {
 	override public function init() {
-		info = "Due to some paths being in a different winding direction, in Canvas/Cairo software renderer there are holes in the mask. This is the correct behaviour, however on non-Flash targets hitTestPoint returns true in these areas, while Flash returns false.";
-		var bmpData = Assets.getBitmapData("assets/texture.png");
+		info = "Due to some paths having a different winding order, these become holes in the mask in Cairo/Canvas/Flash. However hitTestPoint returns false in these holes for Flash, but true for Cairo/Canvas";
 
 		var tiger = new TigerSprite();
 		tiger.width = 800;
@@ -1029,7 +1353,7 @@ class ComplexMaskTest extends Test {
 		var r = tiger.getBounds(this);
 
 		var spr = new Sprite();
-		spr.graphics.beginBitmapFill(bmpData, new Matrix(1, 0, 0, 1, 0, 0));
+		spr.graphics.beginBitmapFill(Main.bd1, new Matrix(1, 0, 0, 1, 0, 0));
 		spr.graphics.drawRect(r.x, r.y, r.width, r.height);
 		addChild(spr);
 
@@ -1042,11 +1366,9 @@ class GLBatchTest extends Test {
 		var spr = new Sprite();
 		var g = spr.graphics;
 
-		info = "This test draws a number of primitives with the least amount of GL draw calls possible.";
+		info = "This test attempts to draw a number of primitives with the least number of GL draw calls.";
 
-		// g.beginFill(0xFF0000);
-		var bmpData = Assets.getBitmapData("assets/texture.png");
-		g.beginBitmapFill(bmpData);
+		g.beginBitmapFill(Main.bd1);
 
 		var gap = 50.0;
 		var h = 100.0;
@@ -1056,6 +1378,8 @@ class GLBatchTest extends Test {
 
 		// row 1
 		g.drawRect(x, y, w, h);
+		g.drawRect(x + 25, y + 25, w, h);
+		g.drawRect(x + 50, y + 50, w, h);
 		x += w + gap;
 		g.drawCircle(x + w / 2, y + h / 2, w / 2);
 		x += w + gap;
@@ -1092,11 +1416,82 @@ class GLBatchTest extends Test {
 		g.drawTriangles(Vector.ofArray(vertices), Vector.ofArray(indices));
 
 		onEnterFrame = function(e:Event) {
-			spr.width = stage.mouseX;
-			spr.height = stage.mouseY;
+			spr.width = stage.mouseX + 0.5;
+			spr.height = stage.mouseY + 0.5;
 		};
 
 		addChild(spr);
+	}
+}
+
+class FrameTimingTest1 extends Test {
+	override public function init() {
+		var g = graphics;
+		var i = 0;
+		var arcSteps = 120;
+
+		onEnterFrame = function(e:Event) {
+			i++;
+			var phase = Std.int(i / arcSteps);
+			var t = i % arcSteps;
+
+			var headStep:Int;
+			var tailStep:Int;
+
+			if ((phase & 1) == 0) {
+				headStep = phase * arcSteps + t;
+				tailStep = phase * arcSteps;
+			} else {
+				headStep = (phase + 1) * arcSteps;
+				tailStep = phase * arcSteps + t;
+			}
+
+			var head = (headStep / arcSteps) * Math.PI * 2;
+			var tail = (tailStep / arcSteps) * Math.PI * 2;
+			//
+			g.clear();
+			g.beginFill(0x222222);
+			g.drawCircle(0, 0, 300);
+			var d = i % 2;
+			if (d == 0)
+				g.beginFill(0xff0000);
+			else
+				g.beginFill(0x00ff00);
+			//
+			Utils.drawArc(g, 0, 0, 300, tail, head);
+		};
+	}
+}
+
+class FrameTimingTest2 extends Test {
+	override public function init() {
+		var i = 0;
+		var arcSteps = 120;
+		var spr = new Sprite();
+		var g = spr.graphics;
+		addChild(spr);
+
+		for (i in 0...3) {
+			var c = new Sprite();
+			c.graphics.beginFill(0x0000ff);
+			c.graphics.drawRect(0, 0, 100, 100);
+			c.x = i * 100;
+			c.y = i * 100;
+			c.alpha = 0.5;
+			spr.addChild(c);
+		}
+
+		onEnterFrame = function(e:Event) {
+			i++;
+			spr.rotation = (i / arcSteps) * 360;
+			var d = i % 2;
+			g.clear();
+			if (d == 0)
+				g.beginFill(0xff0000);
+			else
+				g.beginFill(0x00ff00);
+			g.drawRect(-300, -300, 600, 600);
+		};
 	}
 }
 
@@ -1131,5 +1526,25 @@ class ShaderFillTest extends Test {
 			    width, height
 		]));
 		spr.graphics.endFill();
+	}
+}
+
+class GraphicsTest2 extends Test {
+	override public function init() {
+		var s2 = new Sprite();
+		s2.x = 400;
+		s2.y = 400;
+		s2.graphics.lineStyle(10, 0x269B66, 1);
+		s2.graphics.beginFill(0xff0000);
+		s2.graphics.drawRoundRect(0, 0, 200, 200, 50, 50);
+		s2.graphics.endFill();
+		s2.scale9Grid = new Rectangle(50, 50, 100, 100);
+		addChild(s2);
+
+		var i = 0;
+		onEnterFrame = function(e:Event) {
+			s2.scaleX = s2.scaleY = 0;
+			i++;
+		};
 	}
 }
